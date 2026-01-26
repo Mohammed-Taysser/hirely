@@ -1,0 +1,1254 @@
+openapi: 3.0.0
+info:
+  title: Hirely API
+  version: 1.0.0
+  description: API documentation for Hirely backend
+  contact:
+    name: Mohammed Taysser
+    url: https://github.com/mohammed-taysser
+    email: mohamedtaysser983@gmail.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: /api
+    description: Local dev server
+  - url: '{server}/api'
+    description: Production server with custom domain
+    variables:
+      server:
+        default: ''
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: System
+    description: System-level operations
+  - name: Auth
+    description: Authentication endpoints
+  - name: Users
+    description: User management
+  - name: Plans
+    description: Plan management
+  - name: Resumes
+    description: Resume operations
+
+paths:
+  /health:
+    get:
+      tags: [System]
+      summary: Health check
+      responses:
+        '200':
+          description: System health data
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/HealthStatus'
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name:
+                  type: string
+                  minLength: 2
+                  maxLength: 100
+                email:
+                  type: string
+                  format: email
+                  maxLength: 100
+                password:
+                  type: string
+                  format: password
+                  minLength: 6
+                  maxLength: 100
+      responses:
+        '201':
+          description: User registered
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AuthResponse'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  maxLength: 100
+                password:
+                  type: string
+                  format: password
+                  minLength: 6
+                  maxLength: 100
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AuthResponse'
+
+  /auth/refresh-token:
+    post:
+      tags: [Auth]
+      summary: Refresh access token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: New access token
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          accessToken:
+                            type: string
+                          refreshToken:
+                            type: string
+
+  /auth/switch-user:
+    post:
+      tags: [Auth]
+      summary: Switch to another user (Admin/Dev)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId]
+              properties:
+                userId:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Switched user successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AuthResponse'
+
+  /users/me:
+    get:
+      tags: [Users]
+      summary: Get current user
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+
+  /users:
+    get:
+      tags: [Users]
+      summary: Get users (paginated)
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/PageParameter'
+        - $ref: '#/components/parameters/LimitParameter'
+        - $ref: '#/components/parameters/NameFilter'
+        - $ref: '#/components/parameters/EmailFilter'
+        - $ref: '#/components/parameters/CreatedAtStart'
+        - $ref: '#/components/parameters/CreatedAtEnd'
+      responses:
+        '200':
+          description: Users list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUsersResponse'
+
+    post:
+      tags: [Users]
+      summary: Create a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name:
+                  type: string
+                  minLength: 5
+                  maxLength: 100
+                email:
+                  type: string
+                  format: email
+                  maxLength: 100
+                password:
+                  type: string
+                  format: password
+                  minLength: 6
+                  maxLength: 100
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+
+  /users/basic:
+    get:
+      tags: [Users]
+      summary: Get basic users list (non-paginated)
+      parameters:
+        - $ref: '#/components/parameters/NameFilter'
+        - $ref: '#/components/parameters/EmailFilter'
+        - $ref: '#/components/parameters/CreatedAtStart'
+        - $ref: '#/components/parameters/CreatedAtEnd'
+      responses:
+        '200':
+          description: Users list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/User'
+
+  /users/{userId}:
+    get:
+      tags: [Users]
+      summary: Get user by ID
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      responses:
+        '200':
+          description: User found
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    patch:
+      tags: [Users]
+      summary: Update user
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 5
+                  maxLength: 100
+                email:
+                  type: string
+                  format: email
+                  maxLength: 100
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+
+    delete:
+      tags: [Users]
+      summary: Delete user
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      responses:
+        '200':
+          description: User deleted
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+
+  /plans:
+    get:
+      tags: [Plans]
+      summary: Get plans (paginated)
+      parameters:
+        - $ref: '#/components/parameters/PageParameter'
+        - $ref: '#/components/parameters/LimitParameter'
+        - $ref: '#/components/parameters/PlanCodeFilter'
+        - $ref: '#/components/parameters/PlanNameFilter'
+        - $ref: '#/components/parameters/CreatedAtStart'
+        - $ref: '#/components/parameters/CreatedAtEnd'
+      responses:
+        '200':
+          description: Plans list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPlansResponse'
+
+    post:
+      tags: [Plans]
+      summary: Create a plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, name, limits]
+              properties:
+                code:
+                  type: string
+                  minLength: 2
+                  maxLength: 50
+                name:
+                  type: string
+                  minLength: 2
+                  maxLength: 100
+                description:
+                  type: string
+                  maxLength: 500
+                limits:
+                  $ref: '#/components/schemas/PlanLimitInput'
+      responses:
+        '201':
+          description: Plan created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Plan'
+
+  /plans/{planId}:
+    get:
+      tags: [Plans]
+      summary: Get plan by ID
+      parameters:
+        - $ref: '#/components/parameters/PlanIdParam'
+      responses:
+        '200':
+          description: Plan found
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Plan'
+        '404':
+          description: Plan not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    patch:
+      tags: [Plans]
+      summary: Update plan
+      parameters:
+        - $ref: '#/components/parameters/PlanIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                  minLength: 2
+                  maxLength: 50
+                name:
+                  type: string
+                  minLength: 2
+                  maxLength: 100
+                description:
+                  type: string
+                  maxLength: 500
+                limits:
+                  $ref: '#/components/schemas/PlanLimitInput'
+      responses:
+        '200':
+          description: Plan updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Plan'
+
+    delete:
+      tags: [Plans]
+      summary: Delete plan
+      parameters:
+        - $ref: '#/components/parameters/PlanIdParam'
+      responses:
+        '200':
+          description: Plan deleted
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Plan'
+
+  /resumes:
+    get:
+      tags: [Resumes]
+      summary: Get resumes (paginated)
+      parameters:
+        - $ref: '#/components/parameters/PageParameter'
+        - $ref: '#/components/parameters/LimitParameter'
+        - $ref: '#/components/parameters/CreatedAtStart'
+        - $ref: '#/components/parameters/CreatedAtEnd'
+      responses:
+        '200':
+          description: Resumes list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResumesResponse'
+
+    post:
+      tags: [Resumes]
+      summary: Create resume
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, data]
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+                data:
+                  type: object
+      responses:
+        '201':
+          description: Resume created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Resume'
+
+  /resumes/basic:
+    get:
+      tags: [Resumes]
+      summary: Get basic resumes list (non-paginated)
+      parameters:
+        - $ref: '#/components/parameters/CreatedAtStart'
+        - $ref: '#/components/parameters/CreatedAtEnd'
+      responses:
+        '200':
+          description: Resumes list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Resume'
+
+  /resumes/{resumeId}:
+    get:
+      tags: [Resumes]
+      summary: Get resume by ID
+      parameters:
+        - $ref: '#/components/parameters/ResumeIdParam'
+      responses:
+        '200':
+          description: Resume found
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Resume'
+
+    patch:
+      tags: [Resumes]
+      summary: Update resume
+      parameters:
+        - $ref: '#/components/parameters/ResumeIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+                data:
+                  type: object
+      responses:
+        '200':
+          description: Resume updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Resume'
+
+    delete:
+      tags: [Resumes]
+      summary: Delete resume
+      parameters:
+        - $ref: '#/components/parameters/ResumeIdParam'
+      responses:
+        '200':
+          description: Resume deleted
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Resume'
+
+  /resumes/{resumeId}/snapshots:
+    get:
+      tags: [Resumes]
+      summary: Get resume snapshots
+      parameters:
+        - $ref: '#/components/parameters/ResumeIdParam'
+        - $ref: '#/components/parameters/PageParameter'
+        - $ref: '#/components/parameters/LimitParameter'
+        - $ref: '#/components/parameters/CreatedAtStart'
+        - $ref: '#/components/parameters/CreatedAtEnd'
+      responses:
+        '200':
+          description: Resume snapshots
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResumeSnapshotsResponse'
+
+  /resumes/{resumeId}/exports:
+    get:
+      tags: [Resumes]
+      summary: Get resume exports
+      parameters:
+        - $ref: '#/components/parameters/ResumeIdParam'
+        - $ref: '#/components/parameters/PageParameter'
+        - $ref: '#/components/parameters/LimitParameter'
+        - $ref: '#/components/parameters/CreatedAtStart'
+        - $ref: '#/components/parameters/CreatedAtEnd'
+        - $ref: '#/components/parameters/ExportStatusFilter'
+      responses:
+        '200':
+          description: Resume exports
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResumeExportsResponse'
+
+  /resumes/{resumeId}/exports/{exportId}/status:
+    get:
+      tags: [Resumes]
+      summary: Get resume export status
+      parameters:
+        - $ref: '#/components/parameters/ResumeIdParam'
+        - $ref: '#/components/parameters/ExportIdParam'
+      responses:
+        '200':
+          description: Export status
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ExportStatusResponse'
+
+  /resumes/{resumeId}/export:
+    post:
+      tags: [Resumes]
+      summary: Enqueue export (stored, async)
+      parameters:
+        - $ref: '#/components/parameters/ResumeIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [store]
+              properties:
+                store:
+                  type: boolean
+                  example: true
+      responses:
+        '200':
+          description: Export enqueued
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          exportId:
+                            type: string
+                          delivery:
+                            type: string
+                            enum: [download, email]
+
+  /resumes/{resumeId}/export/download:
+    get:
+      tags: [Resumes]
+      summary: Direct export download (no storage)
+      parameters:
+        - $ref: '#/components/parameters/ResumeIdParam'
+      responses:
+        '200':
+          description: PDF file
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from authentication endpoint
+
+  parameters:
+    PageParameter:
+      name: page
+      in: query
+      description: Page number
+      required: false
+      schema:
+        type: integer
+        default: 1
+        minimum: 1
+    LimitParameter:
+      name: limit
+      in: query
+      description: Number of items per page
+      required: false
+      schema:
+        type: integer
+        default: 10
+        minimum: 1
+        maximum: 500
+    NameFilter:
+      name: name
+      in: query
+      required: false
+      schema:
+        type: string
+        minLength: 3
+        maxLength: 100
+    EmailFilter:
+      name: email
+      in: query
+      required: false
+      schema:
+        type: string
+        maxLength: 100
+    CreatedAtStart:
+      name: createdAt[startDate]
+      in: query
+      required: false
+      schema:
+        type: string
+        format: date-time
+    CreatedAtEnd:
+      name: createdAt[endDate]
+      in: query
+      required: false
+      schema:
+        type: string
+        format: date-time
+    UserIdParam:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ResumeIdParam:
+      name: resumeId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ExportIdParam:
+      name: exportId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PlanIdParam:
+      name: planId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PlanCodeFilter:
+      name: code
+      in: query
+      required: false
+      schema:
+        type: string
+        minLength: 2
+        maxLength: 50
+    PlanNameFilter:
+      name: name
+      in: query
+      required: false
+      schema:
+        type: string
+        minLength: 2
+        maxLength: 100
+    ExportStatusFilter:
+      name: status
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [PENDING, READY, FAILED]
+
+  schemas:
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Operation completed successfully
+        data:
+          nullable: true
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          description: Error message or object
+          oneOf:
+            - type: string
+            - type: object
+        stack:
+          type: string
+          nullable: true
+        path:
+          type: string
+          nullable: true
+        method:
+          type: string
+          nullable: true
+
+    PaginatedUsersResponse:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/User'
+                metadata:
+                  type: object
+                  properties:
+                    total:
+                      type: integer
+                    page:
+                      type: integer
+                    limit:
+                      type: integer
+                    totalPages:
+                      type: integer
+                    hasNext:
+                      type: boolean
+                    hasPrev:
+                      type: boolean
+
+    PaginatedPlansResponse:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Plan'
+                metadata:
+                  type: object
+                  properties:
+                    total:
+                      type: integer
+                    page:
+                      type: integer
+                    limit:
+                      type: integer
+                    totalPages:
+                      type: integer
+                    hasNext:
+                      type: boolean
+                    hasPrev:
+                      type: boolean
+
+    PaginatedResumesResponse:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Resume'
+                metadata:
+                  type: object
+                  properties:
+                    total:
+                      type: integer
+                    page:
+                      type: integer
+                    limit:
+                      type: integer
+                    totalPages:
+                      type: integer
+                    hasNext:
+                      type: boolean
+                    hasPrev:
+                      type: boolean
+
+    PaginatedResumeSnapshotsResponse:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/ResumeSnapshot'
+                metadata:
+                  type: object
+                  properties:
+                    total:
+                      type: integer
+                    page:
+                      type: integer
+                    limit:
+                      type: integer
+                    totalPages:
+                      type: integer
+                    hasNext:
+                      type: boolean
+                    hasPrev:
+                      type: boolean
+
+    PaginatedResumeExportsResponse:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/ResumeExport'
+                metadata:
+                  type: object
+                  properties:
+                    total:
+                      type: integer
+                    page:
+                      type: integer
+                    limit:
+                      type: integer
+                    totalPages:
+                      type: integer
+                    hasNext:
+                      type: boolean
+                    hasPrev:
+                      type: boolean
+
+    ExportStatusResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [PENDING, READY, FAILED]
+        error:
+          type: string
+          nullable: true
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+        downloadUrl:
+          type: string
+          nullable: true
+
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+
+    PlanLimitInput:
+      type: object
+      required: [maxResumes, maxExports, dailyUploadMb]
+      properties:
+        maxResumes:
+          type: integer
+        maxExports:
+          type: integer
+        dailyUploadMb:
+          type: integer
+
+    PlanLimit:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        maxResumes:
+          type: integer
+        maxExports:
+          type: integer
+        dailyUploadMb:
+          type: integer
+        planId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Plan:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        limits:
+          $ref: '#/components/schemas/PlanLimit'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        planId:
+          type: string
+          format: uuid
+        plan:
+          $ref: '#/components/schemas/Plan'
+        isVerified:
+          type: boolean
+        isDeleted:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Resume:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        data:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ResumeSnapshot:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        resumeId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        data:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+
+    ResumeExport:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        snapshotId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [PENDING, READY, FAILED]
+        url:
+          type: string
+          nullable: true
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    HealthStatus:
+      type: object
+      properties:
+        systemHealth:
+          type: string
+          enum: [HEALTHY, DEGRADED, DOWN]
+        cpu:
+          type: object
+          properties:
+            totalIdle:
+              type: number
+            totalTick:
+              type: number
+            cpuUsages:
+              type: number
+        memory:
+          type: object
+          properties:
+            totalMem:
+              type: number
+            freeMem:
+              type: number
+            memoryUsages:
+              type: number
+        uptime:
+          type: number
+        platform:
+          type: string
+        arch:
+          type: string
+        hostname:
+          type: string
+        release:
+          type: string
+        totalCpus:
+          type: number
+        systemType:
+          type: string
+        systemVersion:
+          type: string

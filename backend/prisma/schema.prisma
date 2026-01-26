@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id       String @id @default(uuid())
+  email    String @unique
+  name     String
+  password String
+
+  isVerified Boolean @default(false)
+  isDeleted  Boolean @default(false)
+
+  verificationToken          String?
+  verificationTokenExpiresAt DateTime?
+
+  resetToken          String?
+  resetTokenExpiresAt DateTime?
+
+  planId String
+  plan   Plan   @relation("UserPlan", fields: [planId], references: [id], onDelete: Restrict)
+
+  resumes    Resume[]
+  snapshots  ResumeSnapshot[]
+  exports    ResumeExport[]
+  activities ActivityLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([planId])
+  @@index([createdAt])
+}
+
+model Resume {
+  id   String @id @default(uuid())
+  name String
+  data Json
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  snapshots ResumeSnapshot[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model ResumeSnapshot {
+  id   String @id @default(uuid())
+  data Json
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  resumeId String
+  resume   Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+
+  resumeExports ResumeExport[]
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([resumeId])
+  @@index([createdAt])
+}
+
+model ResumeExport {
+  id         String @id @default(uuid())
+  snapshotId String
+  userId     String
+
+  url       String?
+  expiresAt DateTime?
+  status    ExportStatus @default(PENDING)
+
+  snapshot ResumeSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([snapshotId])
+  @@index([status])
+  @@index([expiresAt])
+  @@index([createdAt])
+}
+
+model ActivityLog {
+  id       String @id @default(uuid())
+  userId   String
+  action   String
+  metadata Json
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model Plan {
+  id          String  @id @default(uuid())
+  code        String  @unique
+  name        String
+  description String?
+
+  users  User[]     @relation("UserPlan")
+  limits PlanLimit? @relation("PlanLimits")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PlanLimit {
+  id String @id @default(uuid())
+
+  maxResumes    Int @default(1)
+  maxExports    Int @default(1)
+  dailyUploadMb Int @default(100)
+
+  planId String @unique
+  plan   Plan   @relation("PlanLimits", fields: [planId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum ExportStatus {
+  PENDING
+  READY
+  FAILED
+}
