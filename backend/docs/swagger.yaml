@@ -34,6 +34,8 @@ tags:
     description: Plan management
   - name: Resumes
     description: Resume operations
+  - name: ResumeTemplates
+    description: Resume templates catalog
 
 paths:
   /health:
@@ -534,6 +536,18 @@ paths:
                   maxLength: 200
                 data:
                   type: object
+                templateId:
+                  type: string
+                  description: Resume template identifier (e.g. classic)
+                  default: classic
+                templateVersion:
+                  type: string
+                  nullable: true
+                  description: Specific template version, if locked
+                themeConfig:
+                  type: object
+                  nullable: true
+                  description: Per-resume theme overrides (colors, fonts, etc.)
       responses:
         '201':
           description: Resume created
@@ -606,6 +620,17 @@ paths:
                   maxLength: 200
                 data:
                   type: object
+                templateId:
+                  type: string
+                  description: Resume template identifier (e.g. classic)
+                templateVersion:
+                  type: string
+                  nullable: true
+                  description: Specific template version, if locked
+                themeConfig:
+                  type: object
+                  nullable: true
+                  description: Per-resume theme overrides (colors, fonts, etc.)
       responses:
         '200':
           description: Resume updated
@@ -636,6 +661,26 @@ paths:
                     properties:
                       data:
                         $ref: '#/components/schemas/Resume'
+
+  /resume-templates:
+    get:
+      tags: [ResumeTemplates]
+      summary: List available resume templates
+      description: Returns the list of resume templates exposed by the shared templates package.
+      responses:
+        '200':
+          description: Resume templates list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ResumeTemplate'
 
   /resumes/{resumeId}/snapshots:
     get:
@@ -865,6 +910,7 @@ components:
           type: string
           example: Operation completed successfully
         data:
+          type: object
           nullable: true
 
     ErrorResponse:
@@ -1158,6 +1204,15 @@ components:
           type: string
         data:
           type: object
+        templateId:
+          type: string
+          description: Resume template identifier (e.g. classic)
+        templateVersion:
+          type: string
+          nullable: true
+        themeConfig:
+          type: object
+          nullable: true
         createdAt:
           type: string
           format: date-time
@@ -1211,6 +1266,26 @@ components:
         updatedAt:
           type: string
           format: date-time
+
+    ResumeTemplate:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Template identifier (e.g. classic, modern)
+        name:
+          type: string
+          description: Human-readable template name
+        description:
+          type: string
+          description: Short description of the template
+        version:
+          type: string
+          description: Template semantic version
+        isDeprecated:
+          type: boolean
+          nullable: true
+          description: Whether the template is deprecated and hidden for new resumes
 
     HealthStatus:
       type: object
