@@ -1,0 +1,11 @@
+{
+  "name": "@hirely/packages",
+  "private": true,
+  "workspaces": [
+    "resume-core",
+    "resume-templates"
+  ],
+  "scripts": {
+    "build": "yarn workspace @hirely/resume-core build && yarn workspace @hirely/resume-templates build"
+  }
+}

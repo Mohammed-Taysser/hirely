@@ -1,0 +1,17 @@
+{
+  "name": "@hirely/resume-templates",
+  "version": "0.1.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "license": "MIT",
+  "private": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@hirely/resume-core": "file:../resume-core"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

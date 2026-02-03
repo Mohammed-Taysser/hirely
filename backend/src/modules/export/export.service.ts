@@ -95,14 +95,17 @@ export const exportService = {
   async generatePdfBuffer(userId: string, resumeId: string) {
     const resume = await prisma.resume.findFirst({
       where: { id: resumeId, userId },
-      select: { data: true },
+      select: { data: true, templateId: true, themeConfig: true },
     });
 
     if (!resume) {
       throw errorService.notFound('Resume not found');
     }
 
-    const html = renderResumeHtml(resume.data);
+    const html = renderResumeHtml(resume.data, {
+      templateId: resume.templateId,
+      themeConfig: (resume.themeConfig as Record<string, unknown> | null) ?? undefined,
+    });
     const pdfBuffer = await renderPdfFromHtml(html);
 
     return { pdfBuffer };
@@ -127,7 +130,15 @@ export const exportService = {
 
     const exportRecord = await this.createExportRecord(userId, snapshot.id);
 
-    const html = renderResumeHtml(snapshot.data);
+    const resume = await prisma.resume.findFirst({
+      where: { id: resumeId, userId },
+      select: { templateId: true, themeConfig: true },
+    });
+
+    const html = renderResumeHtml(snapshot.data, {
+      templateId: resume?.templateId,
+      themeConfig: (resume?.themeConfig as Record<string, unknown> | null) ?? undefined,
+    });
     const pdfBuffer = await renderPdfFromHtml(html);
 
     await billingService.enforceDailyUploadLimit(userId, user.planId, pdfBuffer.length);

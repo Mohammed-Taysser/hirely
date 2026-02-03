@@ -7,6 +7,8 @@ import qs from 'qs';
 import swaggerUi from 'swagger-ui-express';
 import YAML from 'yamljs';
 
+import { BODY_LIMIT, RATE_LIMITS } from './apps/constant';
+import rateLimiter from './middleware/rate-limit.middleware';
 import errorService from './modules/shared/services/error.service';
 import loggerService from './modules/shared/services/logger.service';
 
@@ -15,8 +17,10 @@ import errorHandlerMiddleware from '@/middleware/error-handler.middleware';
 import authRoutes from '@/modules/auth/auth.route';
 import planRoutes from '@/modules/plan/plan.route';
 import resumeRoutes from '@/modules/resume/resume.route';
+import resumeTemplateRoutes from '@/modules/resumeTemplate/resumeTemplate.route';
 import systemRoutes from '@/modules/system/system.route';
 import userRoutes from '@/modules/user/user.route';
+import '@/modules/user/user.subscriptions';
 
 const app = express();
 
@@ -38,6 +42,9 @@ app.use(
   })
 );
 
+// rate limiter
+app.use(rateLimiter(RATE_LIMITS.GENERAL));
+
 // enable CORS - Cross Origin Resource Sharing
 app.use(
   cors({
@@ -56,8 +63,8 @@ app.use(
 );
 
 // parse body params and attache them to req.body
-app.use(express.urlencoded({ extended: true, limit: '30mb' }));
-app.use(express.json({ limit: '30mb' }));
+app.use(express.urlencoded({ extended: true, limit: BODY_LIMIT }));
+app.use(express.json({ limit: BODY_LIMIT }));
 
 // Parse query strings using qs library
 app.set('query parser', (str: string) => qs.parse(str));
@@ -66,6 +73,7 @@ app.set('query parser', (str: string) => qs.parse(str));
 app.use('/api/', systemRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/plans', planRoutes);
+app.use('/api/resume-templates', resumeTemplateRoutes);
 app.use('/api/resumes', resumeRoutes);
 app.use('/api/users', userRoutes);
 

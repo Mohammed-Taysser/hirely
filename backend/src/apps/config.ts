@@ -53,8 +53,8 @@ const envSchema = z.object({
   JWT_REFRESH_EXPIRES_IN: durationSchema,
 
   // Redis Configuration
-  REDIS_HOST: z.string().trim().default('localhost'),
-  REDIS_PORT: z.coerce.number().positive().int().default(6379),
+  REDIS_HOST: z.string().trim(),
+  REDIS_PORT: z.coerce.number().positive().int(),
 
   // Gotenberg Configuration
   GOTENBERG_URL: z.url(),

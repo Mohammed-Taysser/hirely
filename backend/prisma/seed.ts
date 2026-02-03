@@ -1,7 +1,11 @@
+import { PrismaPg } from '@prisma/adapter-pg';
 import bcrypt from 'bcrypt';
-import { PrismaClient } from '@generated-prisma';
 
-const prisma = new PrismaClient();
+import { PrismaClient } from './generated';
+
+const prisma = new PrismaClient({
+  adapter: new PrismaPg({ connectionString:  process.env.DATABASE_URL }),
+});
 
 const seed = async () => {
   const plans = [
@@ -71,6 +75,7 @@ const seed = async () => {
       data: {
         userId: user.id,
         name: 'Demo Resume',
+        templateId: '1',
         data: {
           meta: { title: 'Backend Engineer', language: 'en' },
           sections: {

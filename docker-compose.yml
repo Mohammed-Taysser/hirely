@@ -1,18 +1,25 @@
 services:
   backend:
-    container_name: hirely-backend
+    container_name: backend
     build:
       context: ./backend
       dockerfile: Dockerfile
       target: development
     env_file:
       - ./backend/.env
+    environment:
+      - DATABASE_URL=postgresql://postgres:123456789@postgres:5432/hirely_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - GOTENBERG_URL=http://gotenberg:3000
     ports:
       - "8080:8080"
     volumes:
       - ./backend:/app
-      - /app/node_modules # npm cache
+      - backend-node_modules:/app/node_modules # npm cache
     depends_on:
+      packages:
+        condition: service_healthy
       postgres:
         condition: service_healthy
       redis:
@@ -20,15 +27,19 @@ services:
     networks:
       - app-network
 
+  # Gotenberg (PDF service)
   gotenberg:
+    container_name: gotenberg
     image: gotenberg/gotenberg:8
     ports:
       - "3000:3000"
-     # Or more secure:
-     # - "127.0.0.1:3000:3000"
-     
+      # Or more secure:
+      # - "127.0.0.1:3000:3000"
+    networks:
+      - app-network
+
   # frontend:
-  #   container_name: hirely-frontend
+  #   container_name: frontend
   #   build:
   #     context: ./frontend
   #     dockerfile: Dockerfile
@@ -47,28 +58,44 @@ services:
 
   postgres:
     image: postgres:16-alpine
-    container_name: hirely-postgres
+    container_name: postgres
     env_file:
       - ./backend/.env
     ports:
-      - "5433:5432"
+      - "5433:5432" # host:container
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
     networks:
       - app-network
 
   redis:
     image: redis:7-alpine
-    container_name: hirely-redis
+    container_name: redis
+    volumes:
+      - redis_data:/data
     ports:
       - "6380:6379"
     networks:
       - app-network
+
+  packages:
+    image: packages
+    container_name: packages
+    build:
+      context: ./packages
+      dockerfile: Dockerfile
+    volumes:
+      - ./packages:/host-packages
+    command: sh -c "cp -rp /packages/* /host-packages/ && echo '✅ Host dist folders populated' && sleep infinity"
+    healthcheck:
+      test: ["CMD", "test", "-d", "/host-packages/resume-templates/dist"]
+      interval: 3s
+      retries: 10
 
 networks:
   app-network:
@@ -76,3 +103,5 @@ networks:
 
 volumes:
   postgres_data:
+  redis_data:
+  backend-node_modules:

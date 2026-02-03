@@ -31,16 +31,28 @@ const logger = pino({
 });
 
 class LoggerService {
-  info(input?: unknown) {
-    logger.info(input);
+  info(input?: unknown, meta?: Record<string, unknown>) {
+    if (meta) {
+      logger.info(meta, String(input));
+    } else {
+      logger.info(input);
+    }
   }
 
-  error(input?: unknown) {
-    logger.error(input);
+  error(input?: unknown, meta?: Record<string, unknown>) {
+    if (meta) {
+      logger.error(meta, String(input));
+    } else {
+      logger.error(input);
+    }
   }
 
-  warn(input?: unknown) {
-    logger.warn(input);
+  warn(input?: unknown, meta?: Record<string, unknown>) {
+    if (meta) {
+      logger.warn(meta, String(input));
+    } else {
+      logger.warn(input);
+    }
   }
 }
 

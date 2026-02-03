@@ -39,9 +39,12 @@ model User {
 }
 
 model Resume {
-  id   String @id @default(uuid())
-  name String
-  data Json
+  id              String @id @default(uuid())
+  name            String
+  data            Json
+  templateId      String
+  templateVersion String?
+  themeConfig     Json?
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -83,6 +86,7 @@ model ResumeExport {
   url       String?
   expiresAt DateTime?
   status    ExportStatus @default(PENDING)
+  error     String?
 
   snapshot ResumeSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
   user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)

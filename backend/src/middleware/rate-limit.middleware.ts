@@ -1,38 +1,41 @@
-import rateLimit from 'express-rate-limit';
+import { NextFunction, Request, Response } from 'express';
+
+import cacheService from '@/modules/shared/services/cache.service';
+import errorService from '@/modules/shared/services/error.service';
 
 /**
- * Rate limiter for creation endpoints (discussions, operations)
- * Limits to 10 requests per minute to prevent spam
+ * Creates a Redis-based rate limiter middleware
+ * @param max Max requests allowed
+ * @param windowSeconds Time window in seconds
  */
-export const creationRateLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 10, // 10 requests per minute
-  message: {
-    success: false,
-    message: 'Too many creation requests. Please try again in a minute.',
-    statusCode: 429,
-  },
-  standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
-  legacyHeaders: false, // Disable `X-RateLimit-*` headers
-  // Skip rate limiting for certain conditions (e.g., trusted IPs)
-  skip: () => {
-    // Can add logic to skip rate limiting for trusted sources
-    return false;
-  },
-});
+function rateLimiter(options: RateLimitConfig) {
+  const { max = 1000, windowSeconds = 60, keyTemplate } = options;
 
-/**
- * General API rate limiter
- * Limits to 100 requests per minute
- */
-export const generalRateLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 100, // 100 requests per minute
-  message: {
-    success: false,
-    message: 'Too many requests. Please try again later.',
-    statusCode: 429,
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // Default key by IP
+      const key = cacheService.formatKey(keyTemplate, { ip: req.ip });
+
+      // Increment counter atomically
+      const current = await cacheService.incrWithTTL(key, windowSeconds);
+
+      // Optional headers
+      res.setHeader('X-RateLimit-Limit', max);
+      res.setHeader('X-RateLimit-Remaining', Math.max(max - current, 0));
+
+      const ttl = await cacheService.ttl(key);
+      res.setHeader('X-RateLimit-Reset', ttl);
+
+      if (current > max) {
+        return errorService.tooManyRequests('Too many requests, please try again later.');
+      }
+
+      next();
+    } catch (err) {
+      console.error('Rate limiter error:', err);
+      next(); // fail open if Redis fails
+    }
+  };
+}
+
+export default rateLimiter;

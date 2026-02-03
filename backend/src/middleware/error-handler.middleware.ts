@@ -40,6 +40,8 @@ const errorHandlerMiddleware: ErrorRequestHandler = (
     body.stack = err.stack;
     body.path = request.originalUrl;
     body.method = request.method;
+
+    console.log(body);
   }
 
   response.status(status).json(body);

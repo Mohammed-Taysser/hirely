@@ -1,11 +1,13 @@
 import bcrypt from 'bcrypt';
-import jwt, { JwtPayload } from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
+
+import { ITokenService, UserTokenPayload } from '../application/services/token.service.interface';
 
 import errorService from './error.service';
 
 import ennValidation from '@/apps/config';
 
-class TokenService {
+class TokenService implements ITokenService {
   private readonly SECRET = ennValidation.JWT_SECRET;
   private readonly ACCESS_EXPIRY = ennValidation.JWT_ACCESS_EXPIRES_IN;
   private readonly REFRESH_EXPIRY = ennValidation.JWT_REFRESH_EXPIRES_IN;
@@ -37,7 +39,7 @@ class TokenService {
     });
   }
 
-  verifyToken<T extends JwtPayload = JwtPayload>(token: string): T {
+  verifyToken<T>(token: string): T {
     try {
       return jwt.verify(token, this.SECRET) as T;
     } catch (error) {

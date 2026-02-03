@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 
-import exportService from '../export/export.service';
+import { exportService } from '../export/export.service';
 
 import type { ResumeDTO } from './resume.dto';
 import resumeService from './resume.service';
@@ -168,6 +168,9 @@ async function createResume(req: Request, response: Response) {
   const resume = await resumeService.createResume({
     data: body.data,
     name: body.name,
+    templateId: body.templateId,
+    templateVersion: body.templateVersion,
+    themeConfig: body.themeConfig,
     user: { connect: { id: request.user.id } },
   });
 
@@ -195,6 +198,9 @@ async function updateResume(req: Request, response: Response) {
 
   const updatedResume = await resumeService.updateResume(resumeId, {
     data: body.data,
+    templateId: body.templateId,
+    templateVersion: body.templateVersion,
+    themeConfig: body.themeConfig,
   });
 
   const snapshot = await resumeService.createSnapshot(request.user.id, resumeId);

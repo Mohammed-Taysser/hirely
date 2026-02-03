@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-import { basePaginationSchema, dateRangeSchema } from '@/modules/shared/dto/filters.dto';
 import CONFIG from '@/apps/config';
+import { basePaginationSchema, dateRangeSchema } from '@/modules/shared/dto/filters.dto';
 
 /* -----------------------
  * Section schemas
@@ -32,15 +32,17 @@ const sectionSchema = z.discriminatedUnion('type', [summarySection, experienceSe
 /* -----------------------
  * Resume data schema
  * ----------------------- */
-const resumeDataSchema = z.object({
-  meta: z.object({
-    title: z.string().min(1),
-    language: z.string().optional(),
-  }),
-  sections: z.record(z.string(), sectionSchema),
-}).refine((data) => Object.keys(data.sections).length <= CONFIG.MAX_RESUME_SECTIONS, {
-  message: `Max sections per resume is ${CONFIG.MAX_RESUME_SECTIONS}`,
-});
+const resumeDataSchema = z
+  .object({
+    meta: z.object({
+      title: z.string().min(1),
+      language: z.string().optional(),
+    }),
+    sections: z.record(z.string(), sectionSchema),
+  })
+  .refine((data) => Object.keys(data.sections).length <= CONFIG.MAX_RESUME_SECTIONS, {
+    message: `Max sections per resume is ${CONFIG.MAX_RESUME_SECTIONS}`,
+  });
 
 const getResumesListSchema = {
   query: basePaginationSchema.extend({
@@ -93,6 +95,9 @@ const createResumeSchema = {
   body: z.object({
     name: z.string().trim().min(1).max(200),
     data: resumeDataSchema,
+    templateId: z.string().trim().min(1).max(100).default('classic'),
+    templateVersion: z.string().trim().max(50).optional(),
+    themeConfig: z.record(z.string(), z.any()).optional(),
   }),
 };
 
@@ -102,6 +107,9 @@ const updateResumeSchema = {
     .object({
       name: z.string().trim().min(1).max(200).optional(),
       data: resumeDataSchema.optional(),
+      templateId: z.string().trim().min(1).max(100).optional(),
+      templateVersion: z.string().trim().max(50).optional(),
+      themeConfig: z.record(z.string(), z.any()).optional(),
     })
     .refine((data) => Object.keys(data).length > 0, {
       message: 'At least one field must be provided',
