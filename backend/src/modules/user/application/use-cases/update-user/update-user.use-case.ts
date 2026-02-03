@@ -11,6 +11,7 @@ import {
 import { UseCase } from '@/modules/shared/application/use-case.interface';
 import { Result } from '@/modules/shared/domain';
 import { IUserRepository } from '@/modules/user/domain/repositories/user.repository.interface';
+import { UserEmail } from '@/modules/user/domain/value-objects/user-email.vo';
 import { UserName } from '@/modules/user/domain/value-objects/user-name.vo';
 
 type UpdateUserResponse = Result<UserDto, ValidationError | UnexpectedError | NotFoundError>;
@@ -32,6 +33,14 @@ export class UpdateUserUseCase implements UseCase<UpdateUserRequestDto, UpdateUs
           return Result.fail(new ValidationError(nameOrError.error as string));
         }
         user.updateName(nameOrError.getValue());
+      }
+
+      if (request.email) {
+        const emailOrError = UserEmail.create(request.email);
+        if (emailOrError.isFailure) {
+          return Result.fail(new ValidationError(emailOrError.error as string));
+        }
+        user.updateEmail(emailOrError.getValue());
       }
 
       if (request.planId) {

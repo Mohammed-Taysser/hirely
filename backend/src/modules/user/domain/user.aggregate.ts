@@ -98,4 +98,9 @@ export class User extends AggregateRoot<UserProps> {
     this.props.name = name;
     this.props.updatedAt = new Date();
   }
+
+  public updateEmail(email: UserEmail): void {
+    this.props.email = email;
+    this.props.updatedAt = new Date();
+  }
 }

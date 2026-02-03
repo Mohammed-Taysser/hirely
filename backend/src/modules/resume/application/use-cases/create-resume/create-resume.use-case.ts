@@ -12,6 +12,8 @@ export interface CreateResumeRequestDto {
   userId: string;
   name: string;
   templateId: string;
+  templateVersion?: string | null;
+  themeConfig?: unknown;
   data: ResumeData;
 }
 
@@ -34,6 +36,8 @@ export class CreateResumeUseCase implements UseCase<CreateResumeRequestDto, Crea
         name,
         data: request.data,
         templateId: request.templateId,
+        templateVersion: request.templateVersion,
+        themeConfig: request.themeConfig,
         userId: request.userId,
       });
 

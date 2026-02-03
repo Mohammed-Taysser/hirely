@@ -55,6 +55,8 @@ export class UpdateResumeUseCase implements UseCase<UpdateResumeRequestDto, Upda
         templateId: resume.templateId,
         templateVersion: resume.templateVersion,
         themeConfig: resume.themeConfig,
+        userId: resume.userId,
+        createdAt: resume.createdAt,
         updatedAt: resume.updatedAt,
       });
     } catch (err) {

@@ -11,6 +11,19 @@ import { exportResumeCommand } from '@/commands/exportResume.command';
 import errorService from '@/modules/shared/services/error.service';
 import responseService from '@/modules/shared/services/response.service';
 import { TypedAuthenticatedRequest } from '@/modules/shared/types/import';
+import { FindResumeByIdUseCase } from '@/modules/resume/application/use-cases/find-resume-by-id/find-resume-by-id.use-case';
+import { CreateResumeUseCase } from '@/modules/resume/application/use-cases/create-resume/create-resume.use-case';
+import { UpdateResumeUseCase } from '@/modules/resume/application/use-cases/update-resume/update-resume.use-case';
+import { DeleteResumeUseCase } from '@/modules/resume/application/use-cases/delete-resume/delete-resume.use-case';
+import { PrismaResumeRepository } from '@/modules/resume/infrastructure/persistence/prisma-resume.repository';
+import { ResumeDtoMapper } from '@/modules/resume/application/mappers/resume.dto.mapper';
+import { NotFoundError, ValidationError } from '@/modules/shared/application/app-error';
+
+const resumeRepository = new PrismaResumeRepository();
+const findResumeByIdUseCase = new FindResumeByIdUseCase(resumeRepository);
+const createResumeUseCase = new CreateResumeUseCase(resumeRepository);
+const updateResumeUseCase = new UpdateResumeUseCase(resumeRepository);
+const deleteResumeUseCase = new DeleteResumeUseCase(resumeRepository);
 
 async function getResumes(req: Request, response: Response) {
   const request = req as TypedAuthenticatedRequest<ResumeDTO['getResumesList']>;
@@ -51,11 +64,20 @@ async function getResumeById(req: Request, response: Response) {
   const request = req as TypedAuthenticatedRequest<ResumeDTO['getResumeById']>;
   const { resumeId } = request.parsedParams;
 
-  const resume = await resumeService.findResumeById(resumeId, request.user.id);
+  const result = await findResumeByIdUseCase.execute({
+    resumeId,
+    userId: request.user.id,
+  });
 
-  if (!resume) {
-    throw errorService.notFound('Resume not found');
+  if (result.isFailure) {
+    const error = result.error;
+    if (error instanceof NotFoundError) {
+      throw errorService.notFound(error.message);
+    }
+    throw errorService.internal();
   }
+
+  const resume = result.getValue();
 
   responseService.success(response, {
     message: 'Resume fetched successfully',
@@ -165,14 +187,24 @@ async function createResume(req: Request, response: Response) {
     throw errorService.forbidden('Resume limit reached for your plan');
   }
 
-  const resume = await resumeService.createResume({
-    data: body.data,
+  const result = await createResumeUseCase.execute({
+    userId: request.user.id,
     name: body.name,
     templateId: body.templateId,
     templateVersion: body.templateVersion,
     themeConfig: body.themeConfig,
-    user: { connect: { id: request.user.id } },
+    data: body.data,
   });
+
+  if (result.isFailure) {
+    const error = result.error;
+    if (error instanceof ValidationError) {
+      throw errorService.badRequest(error.message);
+    }
+    throw errorService.internal();
+  }
+
+  const resume = ResumeDtoMapper.toResponse(result.getValue());
 
   responseService.success(response, {
     message: 'Resume created successfully',
@@ -186,22 +218,28 @@ async function updateResume(req: Request, response: Response) {
   const { resumeId } = request.parsedParams;
   const body = request.parsedBody;
 
-  const existing = await resumeService.findResumeById(resumeId, request.user.id);
-
-  if (!existing) {
-    throw errorService.notFound('Resume not found');
-  }
-
-  if (existing.userId !== request.user.id) {
-    throw errorService.forbidden('You do not have permission to update this resume');
-  }
-
-  const updatedResume = await resumeService.updateResume(resumeId, {
+  const result = await updateResumeUseCase.execute({
+    resumeId,
+    userId: request.user.id,
+    name: body.name,
     data: body.data,
     templateId: body.templateId,
     templateVersion: body.templateVersion,
     themeConfig: body.themeConfig,
   });
+
+  if (result.isFailure) {
+    const error = result.error;
+    if (error instanceof NotFoundError) {
+      throw errorService.notFound(error.message);
+    }
+    if (error instanceof ValidationError) {
+      throw errorService.badRequest(error.message);
+    }
+    throw errorService.internal();
+  }
+
+  const updatedResume = result.getValue();
 
   const snapshot = await resumeService.createSnapshot(request.user.id, resumeId);
 
@@ -219,17 +257,20 @@ async function deleteResume(req: Request, response: Response) {
   const request = req as TypedAuthenticatedRequest<ResumeDTO['getResumeById']>;
   const { resumeId } = request.parsedParams;
 
-  const existing = await resumeService.findResumeById(resumeId, request.user.id);
+  const result = await deleteResumeUseCase.execute({
+    resumeId,
+    userId: request.user.id,
+  });
 
-  if (!existing) {
-    throw errorService.notFound('Resume not found');
+  if (result.isFailure) {
+    const error = result.error;
+    if (error instanceof NotFoundError) {
+      throw errorService.notFound(error.message);
+    }
+    throw errorService.internal();
   }
 
-  if (existing.userId !== request.user.id) {
-    throw errorService.forbidden('You do not have permission to delete this resume');
-  }
-
-  const deleted = await resumeService.deleteResumeById(resumeId);
+  const deleted = result.getValue();
 
   responseService.success(response, {
     message: 'Resume deleted successfully',

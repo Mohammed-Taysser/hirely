@@ -47,7 +47,7 @@ export class RegisterUserUseCase implements UseCase<RegisterUserRequestDto, Regi
         email,
         name,
         password: hashedUserPassword,
-        planId: 'FREE_PLAN_ID',
+        planId: request.planId,
       });
 
       if (userResult.isFailure) {

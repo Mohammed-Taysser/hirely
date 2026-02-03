@@ -2,38 +2,66 @@ import { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 
 import type { AuthDTO } from './auth.dto';
-import authService from './auth.service';
 
 import errorService from '@/modules/shared/services/error.service';
 import responseService from '@/modules/shared/services/response.service';
 import tokenService from '@/modules/shared/services/token.service';
 import { TypedRequest } from '@/modules/shared/types/import';
+import planService from '@/modules/plan/plan.service';
+import { LoginUseCase } from '@/modules/auth/application/use-cases/login/login.use-case';
+import { RefreshTokenUseCase } from '@/modules/auth/application/use-cases/refresh-token/refresh-token.use-case';
+import { SwitchUserUseCase } from '@/modules/auth/application/use-cases/switch-user/switch-user.use-case';
+import { RegisterUserUseCase } from '@/modules/user/application/use-cases/register-user/register-user.use-case';
+import { PrismaUserRepository } from '@/modules/user/infrastructure/persistence/prisma-user.repository';
+import { ValidationError, NotFoundError } from '@/modules/shared/application/app-error';
+import userService from '@/modules/user/user.service';
+
+const userRepository = new PrismaUserRepository();
+const registerUserUseCase = new RegisterUserUseCase(userRepository);
+const loginUseCase = new LoginUseCase(userRepository, tokenService);
+const refreshTokenUseCase = new RefreshTokenUseCase(tokenService);
+const switchUserUseCase = new SwitchUserUseCase(userRepository, tokenService);
 
 async function register(req: Request, response: Response) {
   const request = req as TypedRequest<AuthDTO['register']>;
   const data = request.parsedBody;
 
-  const user = await authService.findUserByEmail(data.email);
+  const plan = await planService.getPlanByCode('FREE');
 
-  if (user) {
-    throw errorService.conflict('Email already registered');
+  if (!plan) {
+    throw errorService.internal('Default plan not configured');
   }
 
-  const hashedPassword = await tokenService.hash(data.password);
-
-  const newUser = await authService.createUser({
-    name: data.name,
+  const result = await registerUserUseCase.execute({
     email: data.email,
-    password: hashedPassword,
-    plan: { connect: { code: 'FREE' } },
+    name: data.name,
+    password: data.password,
+    planId: plan.id,
   });
 
-  const accessToken = tokenService.signAccessToken(newUser);
-  const refreshToken = tokenService.signRefreshToken(newUser);
+  if (result.isFailure) {
+    const error = result.error;
+    if (error instanceof ValidationError) {
+      if (error.message.includes('exists')) {
+        throw errorService.conflict(error.message);
+      }
+      throw errorService.badRequest(error.message);
+    }
+    throw errorService.internal();
+  }
+
+  const user = await userService.findUserById(result.getValue().id);
+
+  if (!user) {
+    throw errorService.internal('Failed to load created user');
+  }
+
+  const accessToken = tokenService.signAccessToken(user);
+  const refreshToken = tokenService.signRefreshToken(user);
 
   responseService.success(response, {
     message: 'User registered successfully',
-    data: { accessToken, refreshToken, user: newUser },
+    data: { accessToken, refreshToken, user },
     statusCode: StatusCodes.CREATED,
   });
 }
@@ -42,71 +70,77 @@ async function login(req: Request, response: Response) {
   const request = req as TypedRequest<AuthDTO['login']>;
   const data = request.parsedBody;
 
-  const user = await authService.findUserByEmail(data.email);
+  const result = await loginUseCase.execute({ email: data.email, password: data.password });
+
+  if (result.isFailure) {
+    const error = result.error;
+    if (error instanceof ValidationError) {
+      throw errorService.badRequest(error.message);
+    }
+    throw errorService.internal();
+  }
+
+  const payload = result.getValue();
+  const user = await userService.findUserById(payload.user.id);
 
   if (!user) {
-    throw errorService.badRequest('Invalid credentials');
+    throw errorService.internal('Failed to load user');
   }
-
-  const valid = await tokenService.compare(data.password, user.password);
-
-  if (!valid) {
-    throw errorService.badRequest('Invalid credentials');
-  }
-
-  const accessToken = tokenService.signAccessToken(user);
-  const refreshToken = tokenService.signRefreshToken(user);
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { password, ...restUser } = user;
 
   responseService.success(response, {
     message: 'Login successful',
-    data: { accessToken, refreshToken, user: restUser },
+    data: {
+      accessToken: payload.accessToken,
+      refreshToken: payload.refreshToken,
+      user,
+    },
   });
 }
 
-function refreshToken(req: Request, response: Response) {
+async function refreshToken(req: Request, response: Response) {
   const request = req as TypedRequest<AuthDTO['refreshToken']>;
   const { refreshToken } = request.parsedBody;
 
-  try {
-    const payload = tokenService.verifyToken<UserTokenPayload>(refreshToken);
+  const result = await refreshTokenUseCase.execute({ refreshToken });
 
-    const newAccessToken = tokenService.signAccessToken(payload);
-    const newRefreshToken = tokenService.signRefreshToken(payload);
-
-    responseService.success(response, {
-      message: 'New access token issued',
-      data: {
-        accessToken: newAccessToken,
-        refreshToken: newRefreshToken,
-      },
-    });
-  } catch {
+  if (result.isFailure) {
     throw errorService.unauthorized('Invalid Or Expired Refresh Token');
   }
+
+  responseService.success(response, {
+    message: 'New access token issued',
+    data: result.getValue(),
+  });
 }
 
 async function switchUser(req: Request, response: Response) {
   const request = req as TypedRequest<AuthDTO['switchUser']>;
   const { userId } = request.parsedBody;
 
-  const user = await authService.findUserById(userId);
+  const result = await switchUserUseCase.execute({ userId });
 
-  if (!user) {
-    throw errorService.badRequest('User not found');
+  if (result.isFailure) {
+    const error = result.error;
+    if (error instanceof NotFoundError) {
+      throw errorService.badRequest(error.message);
+    }
+    throw errorService.internal();
   }
 
-  const accessToken = tokenService.signAccessToken(user);
-  const refreshToken = tokenService.signRefreshToken(user);
+  const payload = result.getValue();
+  const user = await userService.findUserById(payload.user.id);
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { password, ...restUser } = user;
+  if (!user) {
+    throw errorService.internal('Failed to load user');
+  }
 
   responseService.success(response, {
     message: 'Switched user successfully',
-    data: { accessToken, refreshToken, user: restUser },
+    data: {
+      accessToken: payload.accessToken,
+      refreshToken: payload.refreshToken,
+      user,
+    },
   });
 }
 

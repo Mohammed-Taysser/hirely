@@ -23,6 +23,20 @@ Add query-oriented use cases for read operations to keep controllers from callin
 - **Output:** `ResumeDto`
 - **Behavior:** Loads the `Resume` aggregate scoped by `userId`, returns `NotFoundError` when missing.
 
+### 3. `GetUsersUseCase`
+
+- **Path:** `backend/src/modules/user/application/use-cases/get-users/`
+- **Input:** `GetUsersRequestDto` (`page`, `limit`, `filters`)
+- **Output:** `{ users, total }`
+- **Behavior:** Uses the query repository to return paginated users for list screens.
+
+### 4. `GetUsersListUseCase`
+
+- **Path:** `backend/src/modules/user/application/use-cases/get-users-list/`
+- **Input:** `GetUsersListRequestDto` (`filters`)
+- **Output:** `UserBasicDto[]`
+- **Behavior:** Returns lightweight user lists (id/name) for dropdowns or selectors.
+
 ## 📁 Updated File Structure
 
 ```text
@@ -33,6 +47,12 @@ backend/src/modules/
 │           └── find-user-by-id/
 │               ├── find-user-by-id.dto.ts
 │               └── find-user-by-id.use-case.ts
+│           └── get-users/
+│               ├── get-users.dto.ts
+│               └── get-users.use-case.ts
+│           └── get-users-list/
+│               ├── get-users-list.dto.ts
+│               └── get-users-list.use-case.ts
 └── resume/
     └── application/
         └── use-cases/
@@ -44,4 +64,5 @@ backend/src/modules/
 ## 🛠️ Design Decisions
 
 - **Read Use Cases**: Queries are modeled as use cases to keep controllers thin and to centralize mapping to response DTOs.
+- **Query Repository**: Read operations use a dedicated query repository to keep read models separate from aggregate persistence.
 - **Consistent Error Shape**: Missing resources return `NotFoundError`, matching the existing error policy.

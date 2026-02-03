@@ -17,5 +17,7 @@ export interface UpdateResumeResponseDto {
   templateId: string;
   templateVersion?: string | null;
   themeConfig?: unknown;
+  userId: string;
+  createdAt?: Date;
   updatedAt?: Date;
 }

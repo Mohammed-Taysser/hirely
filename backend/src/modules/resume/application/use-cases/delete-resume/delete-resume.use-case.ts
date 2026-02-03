@@ -27,6 +27,8 @@ export class DeleteResumeUseCase implements UseCase<DeleteResumeRequestDto, Dele
         templateId: resume.templateId,
         templateVersion: resume.templateVersion,
         themeConfig: resume.themeConfig,
+        userId: resume.userId,
+        createdAt: resume.createdAt,
         updatedAt: resume.updatedAt,
       });
     } catch (err) {

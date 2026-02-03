@@ -2,13 +2,30 @@ import { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 
 import type { UserDTO } from './user.dto';
-import userService from './user.service';
 import { getUsersFilter } from './user.utils';
 
 import errorService from '@/modules/shared/services/error.service';
 import responseService from '@/modules/shared/services/response.service';
-import tokenService from '@/modules/shared/services/token.service';
 import { TypedAuthenticatedRequest } from '@/modules/shared/types/import';
+import { GetUsersUseCase } from '@/modules/user/application/use-cases/get-users/get-users.use-case';
+import { GetUsersListUseCase } from '@/modules/user/application/use-cases/get-users-list/get-users-list.use-case';
+import { FindUserByIdUseCase } from '@/modules/user/application/use-cases/find-user-by-id/find-user-by-id.use-case';
+import { UpdateUserUseCase } from '@/modules/user/application/use-cases/update-user/update-user.use-case';
+import { DeleteUserUseCase } from '@/modules/user/application/use-cases/delete-user/delete-user.use-case';
+import { RegisterUserUseCase } from '@/modules/user/application/use-cases/register-user/register-user.use-case';
+import { PrismaUserRepository } from '@/modules/user/infrastructure/persistence/prisma-user.repository';
+import { PrismaUserQueryRepository } from '@/modules/user/infrastructure/persistence/prisma-user.query.repository';
+import planService from '@/modules/plan/plan.service';
+import { NotFoundError, ValidationError } from '@/modules/shared/application/app-error';
+
+const userRepository = new PrismaUserRepository();
+const userQueryRepository = new PrismaUserQueryRepository();
+const getUsersUseCase = new GetUsersUseCase(userQueryRepository);
+const getUsersListUseCase = new GetUsersListUseCase(userQueryRepository);
+const findUserByIdUseCase = new FindUserByIdUseCase(userRepository);
+const updateUserUseCase = new UpdateUserUseCase(userRepository);
+const deleteUserUseCase = new DeleteUserUseCase(userRepository);
+const registerUserUseCase = new RegisterUserUseCase(userRepository);
 
 async function getUsers(req: Request, response: Response) {
   const request = req as TypedAuthenticatedRequest<UserDTO['getUsersList']>;
@@ -19,16 +36,22 @@ async function getUsers(req: Request, response: Response) {
 
   const filters = getUsersFilter(request);
 
-  const [users, count] = await userService.getPaginatedUsers(page, limit, filters);
+  const result = await getUsersUseCase.execute({ page, limit, filters });
+
+  if (result.isFailure) {
+    throw errorService.internal();
+  }
+
+  const { users, total } = result.getValue();
 
   responseService.paginated(response, {
     message: 'Users fetched successfully',
     data: users,
     metadata: {
-      total: count,
+      total: total,
       page: page,
       limit: limit,
-      totalPages: Math.ceil(count / limit),
+      totalPages: Math.ceil(total / limit),
     },
   });
 }
@@ -38,7 +61,13 @@ async function getUsersList(req: Request, response: Response) {
 
   const filters = getUsersFilter(request);
 
-  const users = await userService.getBasicUsers(filters);
+  const result = await getUsersListUseCase.execute({ filters });
+
+  if (result.isFailure) {
+    throw errorService.internal();
+  }
+
+  const users = result.getValue();
 
   responseService.success(response, {
     message: 'Users fetched successfully',
@@ -63,11 +92,17 @@ async function getUserById(req: Request, response: Response) {
 
   const { params } = request;
 
-  const user = await userService.findUserById(params.userId);
+  const result = await findUserByIdUseCase.execute({ userId: params.userId });
 
-  if (!user) {
-    throw errorService.notFound('User not found');
+  if (result.isFailure) {
+    const error = result.error;
+    if (error instanceof NotFoundError) {
+      throw errorService.notFound(error.message);
+    }
+    throw errorService.internal();
   }
+
+  const user = result.getValue();
 
   responseService.success(response, {
     message: 'User fetched successfully',
@@ -80,19 +115,31 @@ async function createUser(req: Request, response: Response) {
 
   const body = request.parsedBody;
 
-  const user = await userService.findUserByEmail(body.email);
+  const plan = await planService.getPlanByCode('FREE');
 
-  if (user) {
-    throw errorService.conflict('Email already registered');
+  if (!plan) {
+    throw errorService.internal('Default plan not configured');
   }
 
-  const hashed = await tokenService.hash(body.password);
-
-  const newUser = await userService.createUser({
-    ...body,
-    password: hashed,
-    plan: { connect: { code: 'FREE' } },
+  const result = await registerUserUseCase.execute({
+    email: body.email,
+    name: body.name,
+    password: body.password,
+    planId: plan.id,
   });
+
+  if (result.isFailure) {
+    const error = result.error;
+    if (error instanceof ValidationError) {
+      if (error.message.includes('exists')) {
+        throw errorService.conflict(error.message);
+      }
+      throw errorService.badRequest(error.message);
+    }
+    throw errorService.internal();
+  }
+
+  const newUser = result.getValue();
 
   responseService.success(response, {
     message: 'User created successfully',
@@ -116,7 +163,24 @@ async function updateUser(req: Request, response: Response) {
     throw errorService.forbidden('You do not have permission to update this user');
   }
 
-  const updatedUser = await userService.updateUser(params.userId, body);
+  const result = await updateUserUseCase.execute({
+    userId: params.userId,
+    name: body.name,
+    email: body.email,
+  });
+
+  if (result.isFailure) {
+    const error = result.error;
+    if (error instanceof NotFoundError) {
+      throw errorService.notFound(error.message);
+    }
+    if (error instanceof ValidationError) {
+      throw errorService.badRequest(error.message);
+    }
+    throw errorService.internal();
+  }
+
+  const updatedUser = result.getValue();
 
   responseService.success(response, {
     message: 'User updated successfully',
@@ -129,17 +193,21 @@ async function deleteUser(req: Request, response: Response) {
 
   const { parsedParams: params, user } = request;
 
-  const userRecord = await userService.findUserById(params.userId);
-
-  if (!userRecord) {
-    throw errorService.notFound('User not found');
-  }
-
   if (params.userId !== user.id) {
     throw errorService.forbidden('You do not have permission to delete this user');
   }
 
-  const deletedUser = await userService.deleteUserById(params.userId);
+  const result = await deleteUserUseCase.execute({ userId: params.userId });
+
+  if (result.isFailure) {
+    const error = result.error;
+    if (error instanceof NotFoundError) {
+      throw errorService.notFound(error.message);
+    }
+    throw errorService.internal();
+  }
+
+  const deletedUser = result.getValue();
 
   responseService.success(response, {
     message: 'User deleted successfully',

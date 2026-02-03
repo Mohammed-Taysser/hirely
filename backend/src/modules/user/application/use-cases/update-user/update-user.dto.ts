@@ -1,6 +1,7 @@
 export interface UpdateUserRequestDto {
   userId: string;
   name?: string;
+  email?: string;
   planId?: string;
 }
 
