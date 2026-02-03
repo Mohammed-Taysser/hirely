@@ -1,6 +1,6 @@
 # DDD Implementation Status Report
 
-**Date:** January 31, 2026
+**Date:** February 3, 2026
 
 ## ✅ Completed Tasks
 
@@ -14,7 +14,7 @@ We have successfully migrated the `User` and `Resume` modules to a Domain-Driven
 
 ### 2. Application Layer (The Orchestrator)
 
-- **Use Cases:** `RegisterUserUseCase`, `CreateResumeUseCase`
+- **Use Cases:** `RegisterUserUseCase`, `CreateResumeUseCase`, `FindUserByIdUseCase`, `FindResumeByIdUseCase`
 - **Pattern:** All business logic is encapsulated in use cases that orchestrate entities and repositories.
 - **Error Handling:** Standardized `Result<T, E>` pattern and typed `AppError` hierarchy (`ValidationError`, `UnexpectedError`).
 
@@ -40,6 +40,6 @@ The following areas contain existing errors (unrelated to the recent DDD refacto
 
 ## 🎯 Recommendations for Next Steps
 
-1.  **Refactor Use Cases into Controllers**: Connect the new Use Cases (`RegisterUserUseCase`) to the existing Express controllers/routes (`user.controller.ts`, `auth.controller.ts`) to fully switch the API to the new architecture.
+1.  **Refactor Use Cases into Controllers**: Connect the new Use Cases (`RegisterUserUseCase`, `FindUserByIdUseCase`, etc.) to the existing Express controllers/routes (`user.controller.ts`, `auth.controller.ts`) to fully switch the API to the new architecture.
 2.  **Clean Up Legacy Code**: Address the build errors in `bulkApply` and `infrastructure` to ensure a green CI/CD pipeline.
 3.  **Expand Domain Coverage**: Apply the same DDD patterns to the `Job`, `Application`, and `Billing` modules.

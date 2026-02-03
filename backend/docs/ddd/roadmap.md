@@ -19,6 +19,9 @@ This document tracks the progress of implementing DDD principles in the Hirely a
 - [x] **Step 5: Communication - Domain Events**
   - Implement an Event Dispatcher.
   - Add logic to handle events within and across bounded contexts.
+- [x] **Step 6: Application Layer - Query Use Cases**
+  - Add read use cases for query operations (User, Resume).
+  - Standardize query DTOs and response mapping.
 
 ---
 
@@ -31,3 +34,4 @@ Detailed reports for each step:
 3. [Step 3: Application Layer - Use Cases](./step-3-application-layer-use-cases.md)
 4. [Step 4: Infrastructure Layer - Persistence](./step-4-infrastructure-layer-persistence.md)
 5. [Step 5: Communication - Domain Events](./step-5-communication-domain-events.md)
+6. [Step 6: Application Layer - Query Use Cases](./step-6-application-layer-queries.md)
