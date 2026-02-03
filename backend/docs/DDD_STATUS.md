@@ -14,7 +14,7 @@ We have successfully migrated the `User` and `Resume` modules to a Domain-Driven
 
 ### 2. Application Layer (The Orchestrator)
 
-- **Use Cases:** `RegisterUserUseCase`, `CreateResumeUseCase`, `FindUserByIdUseCase`, `FindResumeByIdUseCase`, `GetUsersUseCase`, `GetUsersListUseCase`, `RefreshTokenUseCase`, `SwitchUserUseCase`, `CreateResumeSnapshotUseCase`, `ExportResumeUseCase`, `GetResumeExportsUseCase`, `GetResumeExportStatusUseCase`, `EnqueueResumeExportUseCase`
+- **Use Cases:** `RegisterUserUseCase`, `CreateResumeUseCase`, `FindUserByIdUseCase`, `FindResumeByIdUseCase`, `GetUsersUseCase`, `GetUsersListUseCase`, `RefreshTokenUseCase`, `SwitchUserUseCase`, `CreateResumeSnapshotUseCase`, `ExportResumeUseCase`, `GetResumeExportsUseCase`, `GetResumeExportStatusUseCase`, `EnqueueResumeExportUseCase`, `GetPlansUseCase`, `GetPlanByIdUseCase`, `CreatePlanUseCase`, `UpdatePlanUseCase`, `DeletePlanUseCase`, `GetExportStatusUseCase`, `GetResumeTemplatesUseCase`, `GetHealthCheckUseCase`
 - **Pattern:** All business logic is encapsulated in use cases that orchestrate entities and repositories.
 - **Error Handling:** Standardized `Result<T, E>` pattern and typed `AppError` hierarchy (`ValidationError`, `UnexpectedError`).
 

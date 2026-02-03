@@ -31,26 +31,33 @@ Before proceeding, we have identified several missing components required to ful
 
 ## 4. Plan Module
 
-**Current Status:** Controller uses `planService` directly.
+**Current Status:** Query/command repositories and use cases are in place; controller is wired to use cases.
 **Missing:**
 
-- **DDD Layer**: No domain/application/infrastructure separation yet (use cases + repositories + mappers).
+- **Domain Model**: Optional — add plan aggregate/value objects if business rules grow.
 
 ## 5. Export Module
 
-**Current Status:** Controller uses `exportService` directly.
+**Current Status:** Export status uses an application use case and service abstraction.
 **Missing:**
 
-- **DDD Layer**: Use cases and service abstractions for export status list/single endpoints.
+- **Other Endpoints**: Move any remaining export flows (if added later) into use cases.
 
 ## 6. ResumeTemplate Module
 
-**Current Status:** Controller uses `resumeTemplateService` directly.
+**Current Status:** Controller uses `GetResumeTemplatesUseCase` with an infrastructure service wrapper.
 **Missing:**
 
-- **DDD Layer (optional)**: Use cases for listing templates if you want consistent application-layer access.
+- **None**: DDD layer is in place for listing templates.
 
-## 7. Technical Constraints / Issues
+## 7. System Module
+
+**Current Status:** Health check logic moved to `GetHealthCheckUseCase` + infrastructure service.
+**Missing:**
+
+- **None**: Controller is thin and follows application layer.
+
+## 8. Technical Constraints / Issues
 
 - **Password Hashing Abstraction**: Added `IPasswordHasher`, and auth use cases now use it for comparison.
 - **Legacy Build Errors**: As noted, the build fails due to unrelated legacy files. These might become blockers if we try to switch the main entry point to the new code without cleaning them up.

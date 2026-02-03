@@ -7,7 +7,8 @@ import errorService from '@/modules/shared/services/error.service';
 import responseService from '@/modules/shared/services/response.service';
 import tokenService from '@/modules/shared/services/token.service';
 import { TypedRequest } from '@/modules/shared/types/import';
-import planService from '@/modules/plan/plan.service';
+import { GetPlanByCodeUseCase } from '@/modules/plan/application/use-cases/get-plan-by-code/get-plan-by-code.use-case';
+import { PrismaPlanQueryRepository } from '@/modules/plan/infrastructure/persistence/prisma-plan.query.repository';
 import { LoginUseCase } from '@/modules/auth/application/use-cases/login/login.use-case';
 import { RefreshTokenUseCase } from '@/modules/auth/application/use-cases/refresh-token/refresh-token.use-case';
 import { SwitchUserUseCase } from '@/modules/auth/application/use-cases/switch-user/switch-user.use-case';
@@ -15,24 +16,31 @@ import { RegisterUserUseCase } from '@/modules/user/application/use-cases/regist
 import { PrismaUserRepository } from '@/modules/user/infrastructure/persistence/prisma-user.repository';
 import { NotFoundError } from '@/modules/shared/application/app-error';
 import { mapAppErrorToHttp } from '@/modules/shared/application/app-error.mapper';
-import userService from '@/modules/user/user.service';
+import { PrismaUserQueryRepository } from '@/modules/user/infrastructure/persistence/prisma-user.query.repository';
+import { GetUserByIdQueryUseCase } from '@/modules/user/application/use-cases/get-user-by-id-query/get-user-by-id-query.use-case';
 import passwordHasherService from '@/modules/shared/services/password-hasher.service';
 
 const userRepository = new PrismaUserRepository();
+const userQueryRepository = new PrismaUserQueryRepository();
 const registerUserUseCase = new RegisterUserUseCase(userRepository, passwordHasherService);
 const loginUseCase = new LoginUseCase(userRepository, tokenService, passwordHasherService);
 const refreshTokenUseCase = new RefreshTokenUseCase(tokenService);
 const switchUserUseCase = new SwitchUserUseCase(userRepository, tokenService);
+const getUserByIdQueryUseCase = new GetUserByIdQueryUseCase(userQueryRepository);
+const planQueryRepository = new PrismaPlanQueryRepository();
+const getPlanByCodeUseCase = new GetPlanByCodeUseCase(planQueryRepository);
 
 async function register(req: Request, response: Response) {
   const request = req as TypedRequest<AuthDTO['register']>;
   const data = request.parsedBody;
 
-  const plan = await planService.getPlanByCode('FREE');
+  const planResult = await getPlanByCodeUseCase.execute({ code: 'FREE' });
 
-  if (!plan) {
-    throw errorService.internal('Default plan not configured');
+  if (planResult.isFailure) {
+    throw mapAppErrorToHttp(planResult.error);
   }
+
+  const plan = planResult.getValue();
 
   const result = await registerUserUseCase.execute({
     email: data.email,
@@ -45,12 +53,13 @@ async function register(req: Request, response: Response) {
     throw mapAppErrorToHttp(result.error);
   }
 
-  const user = await userService.findUserById(result.getValue().id);
+  const userResult = await getUserByIdQueryUseCase.execute({ userId: result.getValue().id });
 
-  if (!user) {
-    throw errorService.internal('Failed to load created user');
+  if (userResult.isFailure) {
+    throw mapAppErrorToHttp(userResult.error);
   }
 
+  const user = userResult.getValue();
   const accessToken = tokenService.signAccessToken(user);
   const refreshToken = tokenService.signRefreshToken(user);
 
@@ -72,11 +81,13 @@ async function login(req: Request, response: Response) {
   }
 
   const payload = result.getValue();
-  const user = await userService.findUserById(payload.user.id);
+  const userResult = await getUserByIdQueryUseCase.execute({ userId: payload.user.id });
 
-  if (!user) {
-    throw errorService.internal('Failed to load user');
+  if (userResult.isFailure) {
+    throw mapAppErrorToHttp(userResult.error);
   }
+
+  const user = userResult.getValue();
 
   responseService.success(response, {
     message: 'Login successful',
@@ -119,11 +130,13 @@ async function switchUser(req: Request, response: Response) {
   }
 
   const payload = result.getValue();
-  const user = await userService.findUserById(payload.user.id);
+  const userResult = await getUserByIdQueryUseCase.execute({ userId: payload.user.id });
 
-  if (!user) {
-    throw errorService.internal('Failed to load user');
+  if (userResult.isFailure) {
+    throw mapAppErrorToHttp(userResult.error);
   }
+
+  const user = userResult.getValue();
 
   responseService.success(response, {
     message: 'Switched user successfully',

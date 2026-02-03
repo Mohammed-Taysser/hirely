@@ -1,13 +1,27 @@
 import { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 
-import planService from './plan.service';
+import { GetPlansUseCase } from '@/modules/plan/application/use-cases/get-plans/get-plans.use-case';
+import { GetPlanByIdUseCase } from '@/modules/plan/application/use-cases/get-plan-by-id/get-plan-by-id.use-case';
+import { CreatePlanUseCase } from '@/modules/plan/application/use-cases/create-plan/create-plan.use-case';
+import { UpdatePlanUseCase } from '@/modules/plan/application/use-cases/update-plan/update-plan.use-case';
+import { DeletePlanUseCase } from '@/modules/plan/application/use-cases/delete-plan/delete-plan.use-case';
+import { PrismaPlanQueryRepository } from '@/modules/plan/infrastructure/persistence/prisma-plan.query.repository';
+import { PrismaPlanCommandRepository } from '@/modules/plan/infrastructure/persistence/prisma-plan.command.repository';
+import { mapAppErrorToHttp } from '@/modules/shared/application/app-error.mapper';
 import { getPlansFilter } from './plan.utils';
 import type { PlanDTO } from './plan.dto';
 
-import errorService from '@/modules/shared/services/error.service';
 import responseService from '@/modules/shared/services/response.service';
 import { TypedAuthenticatedRequest } from '@/modules/shared/types/import';
+
+const planQueryRepository = new PrismaPlanQueryRepository();
+const planCommandRepository = new PrismaPlanCommandRepository();
+const getPlansUseCase = new GetPlansUseCase(planQueryRepository);
+const getPlanByIdUseCase = new GetPlanByIdUseCase(planQueryRepository);
+const createPlanUseCase = new CreatePlanUseCase(planCommandRepository, planQueryRepository);
+const updatePlanUseCase = new UpdatePlanUseCase(planCommandRepository, planQueryRepository);
+const deletePlanUseCase = new DeletePlanUseCase(planCommandRepository, planQueryRepository);
 
 async function getPlans(req: Request, response: Response) {
   const request = req as TypedAuthenticatedRequest<PlanDTO['getPlans']>;
@@ -18,16 +32,22 @@ async function getPlans(req: Request, response: Response) {
 
   const filters = getPlansFilter(request);
 
-  const [plans, count] = await planService.getPaginatedPlans(page, limit, filters);
+  const result = await getPlansUseCase.execute({ page, limit, filters });
+
+  if (result.isFailure) {
+    throw mapAppErrorToHttp(result.error);
+  }
+
+  const { plans, total } = result.getValue();
 
   responseService.paginated(response, {
     message: 'Plans fetched successfully',
     data: plans,
     metadata: {
-      total: count,
+      total: total,
       page,
       limit,
-      totalPages: Math.ceil(count / limit),
+      totalPages: Math.ceil(total / limit),
     },
   });
 }
@@ -36,11 +56,13 @@ async function getPlanById(req: Request, response: Response) {
   const request = req as TypedAuthenticatedRequest<PlanDTO['getPlanById']>;
   const { planId } = request.parsedParams;
 
-  const plan = await planService.getPlanById(planId);
+  const result = await getPlanByIdUseCase.execute({ planId });
 
-  if (!plan) {
-    throw errorService.notFound('Plan not found');
+  if (result.isFailure) {
+    throw mapAppErrorToHttp(result.error);
   }
+
+  const plan = result.getValue();
 
   responseService.success(response, {
     message: 'Plan fetched successfully',
@@ -52,12 +74,7 @@ async function createPlan(req: Request, response: Response) {
   const request = req as TypedAuthenticatedRequest<PlanDTO['createPlan']>;
   const body = request.parsedBody;
 
-  const existing = await planService.getPlanByCode(body.code);
-  if (existing) {
-    throw errorService.conflict('Plan code already exists');
-  }
-
-  const plan = await planService.createPlan({
+  const result = await createPlanUseCase.execute({
     code: body.code,
     name: body.name,
     description: body.description,
@@ -69,6 +86,12 @@ async function createPlan(req: Request, response: Response) {
       },
     },
   });
+
+  if (result.isFailure) {
+    throw mapAppErrorToHttp(result.error);
+  }
+
+  const plan = result.getValue();
 
   responseService.success(response, {
     message: 'Plan created successfully',
@@ -82,15 +105,12 @@ async function updatePlan(req: Request, response: Response) {
   const { planId } = request.parsedParams;
   const body = request.parsedBody;
 
-  const existing = await planService.getPlanById(planId);
-  if (!existing) {
-    throw errorService.notFound('Plan not found');
-  }
-
-  const plan = await planService.updatePlan(planId, {
-    code: body.code,
-    name: body.name,
-    description: body.description,
+  const result = await updatePlanUseCase.execute({
+    planId,
+    data: {
+      code: body.code,
+      name: body.name,
+      description: body.description,
     limits: body.limits
       ? {
           update: {
@@ -100,7 +120,14 @@ async function updatePlan(req: Request, response: Response) {
           },
         }
       : undefined,
+    },
   });
+
+  if (result.isFailure) {
+    throw mapAppErrorToHttp(result.error);
+  }
+
+  const plan = result.getValue();
 
   responseService.success(response, {
     message: 'Plan updated successfully',
@@ -112,12 +139,13 @@ async function deletePlan(req: Request, response: Response) {
   const request = req as TypedAuthenticatedRequest<PlanDTO['getPlanById']>;
   const { planId } = request.parsedParams;
 
-  const existing = await planService.getPlanById(planId);
-  if (!existing) {
-    throw errorService.notFound('Plan not found');
+  const result = await deletePlanUseCase.execute({ planId });
+
+  if (result.isFailure) {
+    throw mapAppErrorToHttp(result.error);
   }
 
-  const plan = await planService.deletePlan(planId);
+  const plan = result.getValue();
 
   responseService.success(response, {
     message: 'Plan deleted successfully',
