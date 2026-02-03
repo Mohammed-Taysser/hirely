@@ -1,13 +1,15 @@
-import type { User } from "@generated-prisma";
-import { applyService, bulkApplySchema } from "../modules/apply/apply.service";
-import resumeService from "../modules/resume/resume.service";
-import { exportService } from "../modules/export/export.service";
-import { pdfQueue } from "../jobs/queues/pdf.queue";
-import { emailQueue } from "../jobs/queues/email.queue";
-import { redis } from "../infra/redis/redis";
-import errorService from "@/modules/shared/services/error.service";
-import { RATE_LIMIT_BULK_APPLY } from "../shared/constants";
-import prismaApp from "@/apps/prisma";
+import type { User } from '@generated-prisma';
+
+import { applyService, bulkApplySchema, type BulkApplyRecipient } from '../modules/apply/apply.service';
+import resumeService from '../modules/resume/resume.service';
+import { exportService } from '../modules/export/export.service';
+import pdfQueue from '../jobs/queues/pdf.queue';
+import emailQueue from '../jobs/queues/email.queue';
+import { redis } from '../infra/redis/redis';
+
+import errorService from '@/modules/shared/services/error.service';
+import { RATE_LIMITS } from '@/apps/constant';
+import prismaApp from '@/apps/prisma';
 
 const enforceRateLimit = async (key: string, max: number, windowSeconds: number) => {
   const count = await redis.incr(key);
@@ -21,7 +23,8 @@ const enforceRateLimit = async (key: string, max: number, windowSeconds: number)
 };
 
 export const bulkApplyCommand = async (user: User, payload: unknown) => {
-  await enforceRateLimit(`rate:bulk-apply:${user.id}`, RATE_LIMIT_BULK_APPLY.max, RATE_LIMIT_BULK_APPLY.windowSeconds);
+  const limit = RATE_LIMITS.BULK_APPLY;
+  await enforceRateLimit(`rate:bulk-apply:${user.id}`, limit.max, limit.windowSeconds);
 
   const input = bulkApplySchema.parse(payload);
   const userPlan = await prismaApp.user.findUnique({
@@ -44,32 +47,36 @@ export const bulkApplyCommand = async (user: User, payload: unknown) => {
   }
   const exportRecord = await exportService.createExportRecord(user.id, snapshot.id);
 
-  await pdfQueue.add("generate", {
-    exportId: exportRecord.id,
-    snapshotId: snapshot.id,
-    userId: user.id,
-  }, {
-    attempts: 3,
-    backoff: { type: "exponential", delay: 10000 },
-  });
+  await pdfQueue.add(
+    'generate',
+    {
+      exportId: exportRecord.id,
+      snapshotId: snapshot.id,
+      userId: user.id,
+    },
+    {
+      attempts: 3,
+      backoff: { type: 'exponential', delay: 10000 },
+    }
+  );
 
   await Promise.all(
-    input.recipients.map((recipient) =>
+    input.recipients.map((recipient: BulkApplyRecipient) =>
       emailQueue.add(
-        "send",
+        'send',
         {
           exportId: exportRecord.id,
           userId: user.id,
           to: recipient.email,
           recipient,
-          reason: "bulk-apply",
+          reason: 'bulk-apply',
         },
         {
           attempts: 3,
-          backoff: { type: "exponential", delay: 10000 },
-        },
-      ),
-    ),
+          backoff: { type: 'exponential', delay: 10000 },
+        }
+      )
+    )
   );
 
   return {

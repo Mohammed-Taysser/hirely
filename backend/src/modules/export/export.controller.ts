@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 
-import exportService from './export.service';
+import { exportService } from './export.service';
 import type { ExportDTO } from './export.dto';
 
 import responseService from '@/modules/shared/services/response.service';

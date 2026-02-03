@@ -7,7 +7,8 @@ Before proceeding, we have identified several missing components required to ful
 **Current Status:** `RegisterUserUseCase`, `LoginUseCase`, `RefreshTokenUseCase`, and `SwitchUserUseCase` are implemented.
 **Missing:**
 
-- **Controller Wiring**: Ensure all auth routes use the application layer use cases.
+- **Controller Wiring**: Ensure all auth routes use the application layer use cases and avoid direct service calls in controllers.
+  - `auth.controller.ts`: replace `userService.findUserById(...)` with a query use case or query repository for response hydration.
 
 ## 2. User Module
 
@@ -15,15 +16,41 @@ Before proceeding, we have identified several missing components required to ful
 **Missing:**
 
 - **Query / Finder Methods**: Implemented `GetUsersUseCase` and `GetUsersListUseCase`; continue migrating any remaining list endpoints to the query repository.
+  - `user.controller.ts`: already using query repos; verify no remaining direct service usage.
 
 ## 3. Resume Module
 
 **Current Status:** `CreateResumeUseCase`, `UpdateResumeUseCase`, `DeleteResumeUseCase`, `CreateResumeSnapshotUseCase`, `ExportResumeUseCase`, `GetResumeExportsUseCase`, `GetResumeExportStatusUseCase`, and `EnqueueResumeExportUseCase` are implemented.
 **Missing:**
 
+- **Query Use Cases for Lists**:
+  - `resume.controller.ts`: `getResumes`, `getResumesList`, and `getResumeSnapshots` still call `resumeService` directly.
+- **Plan/Limit Checks in Use Cases**:
+  - `resume.controller.ts`: `createResume` uses `resumeService.getPlanLimit` + `countUserResumes` directly; consider a use case to encapsulate plan limit checks.
 - **Remaining Export Flows**: Consider moving export queue workers into domain events if you want full decoupling.
 
-## 4. Technical Constraints / Issues
+## 4. Plan Module
+
+**Current Status:** Controller uses `planService` directly.
+**Missing:**
+
+- **DDD Layer**: No domain/application/infrastructure separation yet (use cases + repositories + mappers).
+
+## 5. Export Module
+
+**Current Status:** Controller uses `exportService` directly.
+**Missing:**
+
+- **DDD Layer**: Use cases and service abstractions for export status list/single endpoints.
+
+## 6. ResumeTemplate Module
+
+**Current Status:** Controller uses `resumeTemplateService` directly.
+**Missing:**
+
+- **DDD Layer (optional)**: Use cases for listing templates if you want consistent application-layer access.
+
+## 7. Technical Constraints / Issues
 
 - **Password Hashing Abstraction**: Added `IPasswordHasher`, and auth use cases now use it for comparison.
 - **Legacy Build Errors**: As noted, the build fails due to unrelated legacy files. These might become blockers if we try to switch the main entry point to the new code without cleaning them up.

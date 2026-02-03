@@ -31,7 +31,10 @@ const mapBaseErrorToAppError = (error: BaseError): AppError => {
   }
 };
 
-const mapAppErrorToHttp = (error: AppError): BaseError => {
+const mapAppErrorToHttp = (error: AppError | null | undefined): BaseError => {
+  if (!error) {
+    return errorService.internal();
+  }
   if (error instanceof ValidationError) {
     return errorService.badRequest(error.message);
   }

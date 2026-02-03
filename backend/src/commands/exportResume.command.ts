@@ -20,7 +20,10 @@ const enforceRateLimit = async (key: string, max: number, windowSeconds: number)
   }
 };
 
-export const exportResumeCommand = async (user: User, resumeId: string) => {
+export const exportResumeCommand = async (
+  user: User,
+  resumeId: string
+): Promise<{ exportId: string; delivery: 'download' | 'email' }> => {
   await enforceRateLimit(`rate:export:${user.id}`, 50, 120);
 
   const userPlan = await prismaApp.user.findUnique({

@@ -3,11 +3,12 @@ import { NextFunction, Request, Response } from 'express';
 import prisma from '@/apps/prisma';
 import errorService from '@/modules/shared/services/error.service';
 import tokenService from '@/modules/shared/services/token.service';
-import { AuthenticatedRequest } from '@/modules/shared/types/import';
+import { UserTokenPayload } from '@/modules/shared/application/services/token.service.interface';
+import { TypedAuthenticatedRequest } from '@/modules/shared/types/import';
 
 async function authenticateMiddleware(req: Request, _res: Response, next: NextFunction) {
   try {
-    const request = req as AuthenticatedRequest;
+    const request = req as TypedAuthenticatedRequest;
     const authHeader = request.headers.authorization;
 
     // Missing header
@@ -22,15 +23,15 @@ async function authenticateMiddleware(req: Request, _res: Response, next: NextFu
       return next(errorService.unauthorized('Invalid Authorization format'));
     }
 
-    let decoded;
+    let decoded: UserTokenPayload;
     try {
-      decoded = tokenService.verifyToken(token.trim());
+      decoded = tokenService.verifyToken<UserTokenPayload>(token.trim());
     } catch (error) {
       return next(error);
     }
 
     // Defensive guard
-    if (!decoded || typeof decoded !== 'object' || !decoded.id) {
+    if (!decoded?.id) {
       return next(errorService.unauthorized('Invalid token payload'));
     }
 
