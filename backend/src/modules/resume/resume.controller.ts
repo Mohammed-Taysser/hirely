@@ -5,7 +5,6 @@ import type { ResumeDTO } from './resume.dto';
 import resumeService from './resume.service';
 import { getResumeExportsFilter, getResumesFilter, getResumeSnapshotsFilter } from './resume.utils';
 
-import { exportResumeCommand } from '@/commands/exportResume.command';
 import errorService from '@/modules/shared/services/error.service';
 import responseService from '@/modules/shared/services/response.service';
 import { TypedAuthenticatedRequest } from '@/modules/shared/types/import';
@@ -15,15 +14,20 @@ import { UpdateResumeUseCase } from '@/modules/resume/application/use-cases/upda
 import { DeleteResumeUseCase } from '@/modules/resume/application/use-cases/delete-resume/delete-resume.use-case';
 import { CreateResumeSnapshotUseCase } from '@/modules/resume/application/use-cases/create-resume-snapshot/create-resume-snapshot.use-case';
 import { ExportResumeUseCase } from '@/modules/resume/application/use-cases/export-resume/export-resume.use-case';
+import { GetResumeExportsUseCase } from '@/modules/resume/application/use-cases/get-resume-exports/get-resume-exports.use-case';
+import { GetResumeExportStatusUseCase } from '@/modules/resume/application/use-cases/get-resume-export-status/get-resume-export-status.use-case';
+import { EnqueueResumeExportUseCase } from '@/modules/resume/application/use-cases/enqueue-resume-export/enqueue-resume-export.use-case';
 import { PrismaResumeRepository } from '@/modules/resume/infrastructure/persistence/prisma-resume.repository';
 import { PrismaResumeQueryRepository } from '@/modules/resume/infrastructure/persistence/prisma-resume.query.repository';
 import { PrismaResumeSnapshotRepository } from '@/modules/resume/infrastructure/persistence/prisma-resume-snapshot.repository';
+import { PrismaResumeExportQueryRepository } from '@/modules/resume/infrastructure/persistence/prisma-resume-export.query.repository';
 import { ResumeExportService } from '@/modules/resume/infrastructure/services/resume-export.service';
-import { NotFoundError, ValidationError } from '@/modules/shared/application/app-error';
+import { mapAppErrorToHttp } from '@/modules/shared/application/app-error.mapper';
 
 const resumeRepository = new PrismaResumeRepository();
 const resumeQueryRepository = new PrismaResumeQueryRepository();
 const resumeSnapshotRepository = new PrismaResumeSnapshotRepository();
+const resumeExportQueryRepository = new PrismaResumeExportQueryRepository();
 const resumeExportService = new ResumeExportService();
 const findResumeByIdUseCase = new FindResumeByIdUseCase(resumeRepository);
 const createResumeUseCase = new CreateResumeUseCase(resumeRepository);
@@ -31,6 +35,9 @@ const updateResumeUseCase = new UpdateResumeUseCase(resumeRepository);
 const deleteResumeUseCase = new DeleteResumeUseCase(resumeRepository);
 const createResumeSnapshotUseCase = new CreateResumeSnapshotUseCase(resumeSnapshotRepository);
 const exportResumeUseCase = new ExportResumeUseCase(resumeExportService);
+const getResumeExportsUseCase = new GetResumeExportsUseCase(resumeExportQueryRepository);
+const getResumeExportStatusUseCase = new GetResumeExportStatusUseCase(resumeExportService);
+const enqueueResumeExportUseCase = new EnqueueResumeExportUseCase();
 
 async function getResumes(req: Request, response: Response) {
   const request = req as TypedAuthenticatedRequest<ResumeDTO['getResumesList']>;
@@ -77,11 +84,7 @@ async function getResumeById(req: Request, response: Response) {
   });
 
   if (result.isFailure) {
-    const error = result.error;
-    if (error instanceof NotFoundError) {
-      throw errorService.notFound(error.message);
-    }
-    throw errorService.internal();
+    throw mapAppErrorToHttp(result.error);
   }
 
   const resume = await resumeQueryRepository.findById(resumeId, request.user.id);
@@ -128,16 +131,22 @@ async function getResumeExports(req: Request, response: Response) {
 
   const filters = getResumeExportsFilter(request);
 
-  const [exports, count] = await resumeService.getPaginatedExports(page, limit, filters);
+  const result = await getResumeExportsUseCase.execute({ page, limit, filters });
+
+  if (result.isFailure) {
+    throw mapAppErrorToHttp(result.error);
+  }
+
+  const { exports, total } = result.getValue();
 
   responseService.paginated(response, {
     message: 'Resume exports fetched successfully',
     data: exports,
     metadata: {
-      total: count,
+      total: total,
       page,
       limit,
-      totalPages: Math.ceil(count / limit),
+      totalPages: Math.ceil(total / limit),
     },
   });
 }
@@ -152,11 +161,7 @@ async function exportResume(req: Request, response: Response) {
   });
 
   if (result.isFailure) {
-    const error = result.error;
-    if (error instanceof NotFoundError) {
-      throw errorService.notFound(error.message);
-    }
-    throw errorService.internal();
+    throw mapAppErrorToHttp(result.error);
   }
 
   response.setHeader('Content-Type', 'application/pdf');
@@ -173,11 +178,18 @@ async function enqueueExport(req: Request, response: Response) {
     throw errorService.badRequest('Use /resumes/:resumeId/export/download for direct download');
   }
 
-  const result = await exportResumeCommand(request.user, resumeId);
+  const result = await enqueueResumeExportUseCase.execute({
+    user: request.user,
+    resumeId,
+  });
+
+  if (result.isFailure) {
+    throw mapAppErrorToHttp(result.error);
+  }
 
   responseService.success(response, {
     message: 'Export started',
-    data: result,
+    data: result.getValue(),
   });
 }
 
@@ -185,11 +197,19 @@ async function getResumeExportStatus(req: Request, response: Response) {
   const request = req as TypedAuthenticatedRequest<ResumeDTO['getResumeExportStatus']>;
   const { resumeId, exportId } = request.parsedParams;
 
-  const status = await exportService.getExportStatusForResume(request.user.id, resumeId, exportId);
+  const result = await getResumeExportStatusUseCase.execute({
+    userId: request.user.id,
+    resumeId,
+    exportId,
+  });
+
+  if (result.isFailure) {
+    throw mapAppErrorToHttp(result.error);
+  }
 
   responseService.success(response, {
     message: 'Export status fetched successfully',
-    data: status,
+    data: result.getValue(),
   });
 }
 
@@ -219,11 +239,7 @@ async function createResume(req: Request, response: Response) {
   });
 
   if (result.isFailure) {
-    const error = result.error;
-    if (error instanceof ValidationError) {
-      throw errorService.badRequest(error.message);
-    }
-    throw errorService.internal();
+    throw mapAppErrorToHttp(result.error);
   }
 
   const resume = await resumeQueryRepository.findById(result.getValue().id, request.user.id);
@@ -255,14 +271,7 @@ async function updateResume(req: Request, response: Response) {
   });
 
   if (result.isFailure) {
-    const error = result.error;
-    if (error instanceof NotFoundError) {
-      throw errorService.notFound(error.message);
-    }
-    if (error instanceof ValidationError) {
-      throw errorService.badRequest(error.message);
-    }
-    throw errorService.internal();
+    throw mapAppErrorToHttp(result.error);
   }
 
   const updatedResume = await resumeQueryRepository.findById(resumeId, request.user.id);
@@ -277,11 +286,7 @@ async function updateResume(req: Request, response: Response) {
   });
 
   if (snapshotResult.isFailure) {
-    const error = snapshotResult.error;
-    if (error instanceof NotFoundError) {
-      throw errorService.notFound(error.message);
-    }
-    throw errorService.internal();
+    throw mapAppErrorToHttp(snapshotResult.error);
   }
 
   responseService.success(response, {
@@ -306,11 +311,7 @@ async function deleteResume(req: Request, response: Response) {
   });
 
   if (result.isFailure) {
-    const error = result.error;
-    if (error instanceof NotFoundError) {
-      throw errorService.notFound(error.message);
-    }
-    throw errorService.internal();
+    throw mapAppErrorToHttp(result.error);
   }
 
   const deleted = existing;

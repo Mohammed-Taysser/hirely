@@ -5,7 +5,7 @@
 
 ## Objective
 
-Move snapshot creation and PDF export generation into the Application layer to keep controllers thin and enforce consistent error handling.
+Move snapshot creation and PDF export generation into the Application layer, and add read/queue flows for resume exports.
 
 ## 🏗️ Core Components Implemented
 
@@ -23,6 +23,27 @@ Move snapshot creation and PDF export generation into the Application layer to k
 - **Output:** `ResumeExportResult` (`pdfBuffer`)
 - **Behavior:** Generates a PDF buffer via the export service abstraction.
 
+### 3. `GetResumeExportsUseCase`
+
+- **Path:** `backend/src/modules/resume/application/use-cases/get-resume-exports/`
+- **Input:** `GetResumeExportsRequestDto` (`page`, `limit`, `filters`)
+- **Output:** `{ exports, total }`
+- **Behavior:** Returns paginated export records via a query repository.
+
+### 4. `GetResumeExportStatusUseCase`
+
+- **Path:** `backend/src/modules/resume/application/use-cases/get-resume-export-status/`
+- **Input:** `GetResumeExportStatusRequestDto` (`userId`, `resumeId`, `exportId`)
+- **Output:** Export status payload (`status`, `expiresAt`, `downloadUrl`)
+- **Behavior:** Queries export status through the export service abstraction.
+
+### 5. `EnqueueResumeExportUseCase`
+
+- **Path:** `backend/src/modules/resume/application/use-cases/enqueue-resume-export/`
+- **Input:** `EnqueueResumeExportRequestDto` (`user`, `resumeId`)
+- **Output:** `{ exportId, delivery }`
+- **Behavior:** Enforces export limits and queues PDF generation.
+
 ## 📁 Updated File Structure
 
 ```text
@@ -30,6 +51,7 @@ backend/src/modules/resume/
 ├── application/
 │   ├── repositories/
 │   │   └── resume-snapshot.repository.interface.ts
+│   │   └── resume-export.query.repository.interface.ts
 │   ├── services/
 │   │   └── resume-export.service.interface.ts
 │   └── use-cases/
@@ -39,9 +61,19 @@ backend/src/modules/resume/
 │       └── export-resume/
 │           ├── export-resume.dto.ts
 │           └── export-resume.use-case.ts
+│       └── get-resume-exports/
+│           ├── get-resume-exports.dto.ts
+│           └── get-resume-exports.use-case.ts
+│       └── get-resume-export-status/
+│           ├── get-resume-export-status.dto.ts
+│           └── get-resume-export-status.use-case.ts
+│       └── enqueue-resume-export/
+│           ├── enqueue-resume-export.dto.ts
+│           └── enqueue-resume-export.use-case.ts
 └── infrastructure/
     ├── persistence/
     │   └── prisma-resume-snapshot.repository.ts
+    │   └── prisma-resume-export.query.repository.ts
     └── services/
         └── resume-export.service.ts
 ```

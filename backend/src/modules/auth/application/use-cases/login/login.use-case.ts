@@ -1,6 +1,7 @@
 import { LoginRequestDto, LoginResponseDto } from './login.dto';
 
 import { UnexpectedError, ValidationError } from '@/modules/shared/application/app-error';
+import { IPasswordHasher } from '@/modules/shared/application/services/password-hasher.service.interface';
 import { ITokenService } from '@/modules/shared/application/services/token.service.interface';
 import { UseCase } from '@/modules/shared/application/use-case.interface';
 import { Result } from '@/modules/shared/domain';
@@ -12,7 +13,8 @@ type LoginResponse = Result<LoginResponseDto, ValidationError | UnexpectedError>
 export class LoginUseCase implements UseCase<LoginRequestDto, LoginResponse> {
   constructor(
     private readonly userRepository: IUserRepository,
-    private readonly tokenService: ITokenService
+    private readonly tokenService: ITokenService,
+    private readonly passwordHasher: IPasswordHasher
   ) {}
 
   public async execute(request: LoginRequestDto): Promise<LoginResponse> {
@@ -31,7 +33,10 @@ export class LoginUseCase implements UseCase<LoginRequestDto, LoginResponse> {
         return Result.fail(new ValidationError('Invalid credentials'));
       }
 
-      const passwordValid = await this.tokenService.compare(request.password, user.password.value);
+      const passwordValid = await this.passwordHasher.compare(
+        request.password,
+        user.password.value
+      );
 
       if (!passwordValid) {
         return Result.fail(new ValidationError('Invalid credentials'));

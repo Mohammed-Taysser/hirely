@@ -8,12 +8,12 @@ import { UserDto } from '../../user.dto';
 
 import { RegisterUserRequestDto } from './register-user.dto';
 
-import { UnexpectedError, ValidationError } from '@/modules/shared/application/app-error';
+import { ConflictError, UnexpectedError, ValidationError } from '@/modules/shared/application/app-error';
 import { IPasswordHasher } from '@/modules/shared/application/services/password-hasher.service.interface';
 import { UseCase } from '@/modules/shared/application/use-case.interface';
 import { Result } from '@/modules/shared/domain';
 
-export type RegisterUserResponse = Result<UserDto, ValidationError | UnexpectedError>;
+export type RegisterUserResponse = Result<UserDto, ValidationError | ConflictError | UnexpectedError>;
 
 export class RegisterUserUseCase implements UseCase<RegisterUserRequestDto, RegisterUserResponse> {
   constructor(
@@ -40,7 +40,7 @@ export class RegisterUserUseCase implements UseCase<RegisterUserRequestDto, Regi
       const userAlreadyExists = await this.userRepository.exists(email);
 
       if (userAlreadyExists) {
-        return Result.fail(new ValidationError('User already exists'));
+        return Result.fail(new ConflictError('User already exists'));
       }
 
       const hashedPassword = await this.passwordHasher.hash(password.value);

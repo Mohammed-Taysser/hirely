@@ -18,14 +18,14 @@ Before proceeding, we have identified several missing components required to ful
 
 ## 3. Resume Module
 
-**Current Status:** `CreateResumeUseCase`, `UpdateResumeUseCase`, `DeleteResumeUseCase`, `CreateResumeSnapshotUseCase`, and `ExportResumeUseCase` are implemented.
+**Current Status:** `CreateResumeUseCase`, `UpdateResumeUseCase`, `DeleteResumeUseCase`, `CreateResumeSnapshotUseCase`, `ExportResumeUseCase`, `GetResumeExportsUseCase`, `GetResumeExportStatusUseCase`, and `EnqueueResumeExportUseCase` are implemented.
 **Missing:**
 
-- **Remaining Export Flows**: Optional follow-up for queued exports and status queries if you want them fully in the Application layer too.
+- **Remaining Export Flows**: Consider moving export queue workers into domain events if you want full decoupling.
 
 ## 4. Technical Constraints / Issues
 
-- **Password Hashing Abstraction**: Added `IPasswordHasher`, but remaining use cases still use `tokenService` for comparison.
+- **Password Hashing Abstraction**: Added `IPasswordHasher`, and auth use cases now use it for comparison.
 - **Legacy Build Errors**: As noted, the build fails due to unrelated legacy files. These might become blockers if we try to switch the main entry point to the new code without cleaning them up.
 - **Controller Integration**: Continue migrating remaining controllers to use application-layer use cases instead of services.
 

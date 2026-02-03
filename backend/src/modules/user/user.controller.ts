@@ -16,7 +16,7 @@ import { RegisterUserUseCase } from '@/modules/user/application/use-cases/regist
 import { PrismaUserRepository } from '@/modules/user/infrastructure/persistence/prisma-user.repository';
 import { PrismaUserQueryRepository } from '@/modules/user/infrastructure/persistence/prisma-user.query.repository';
 import planService from '@/modules/plan/plan.service';
-import { NotFoundError, ValidationError } from '@/modules/shared/application/app-error';
+import { mapAppErrorToHttp } from '@/modules/shared/application/app-error.mapper';
 import passwordHasherService from '@/modules/shared/services/password-hasher.service';
 
 const userRepository = new PrismaUserRepository();
@@ -40,7 +40,7 @@ async function getUsers(req: Request, response: Response) {
   const result = await getUsersUseCase.execute({ page, limit, filters });
 
   if (result.isFailure) {
-    throw errorService.internal();
+    throw mapAppErrorToHttp(result.error);
   }
 
   const { users, total } = result.getValue();
@@ -65,7 +65,7 @@ async function getUsersList(req: Request, response: Response) {
   const result = await getUsersListUseCase.execute({ filters });
 
   if (result.isFailure) {
-    throw errorService.internal();
+    throw mapAppErrorToHttp(result.error);
   }
 
   const users = result.getValue();
@@ -96,11 +96,7 @@ async function getUserById(req: Request, response: Response) {
   const result = await findUserByIdUseCase.execute({ userId: params.userId });
 
   if (result.isFailure) {
-    const error = result.error;
-    if (error instanceof NotFoundError) {
-      throw errorService.notFound(error.message);
-    }
-    throw errorService.internal();
+    throw mapAppErrorToHttp(result.error);
   }
 
   const user = await userQueryRepository.findById(result.getValue().id);
@@ -134,14 +130,7 @@ async function createUser(req: Request, response: Response) {
   });
 
   if (result.isFailure) {
-    const error = result.error;
-    if (error instanceof ValidationError) {
-      if (error.message.includes('exists')) {
-        throw errorService.conflict(error.message);
-      }
-      throw errorService.badRequest(error.message);
-    }
-    throw errorService.internal();
+    throw mapAppErrorToHttp(result.error);
   }
 
   const newUser = await userQueryRepository.findById(result.getValue().id);
@@ -173,14 +162,7 @@ async function updateUser(req: Request, response: Response) {
   });
 
   if (result.isFailure) {
-    const error = result.error;
-    if (error instanceof NotFoundError) {
-      throw errorService.notFound(error.message);
-    }
-    if (error instanceof ValidationError) {
-      throw errorService.badRequest(error.message);
-    }
-    throw errorService.internal();
+    throw mapAppErrorToHttp(result.error);
   }
 
   const updatedUser = await userQueryRepository.findById(result.getValue().id);
@@ -213,11 +195,7 @@ async function deleteUser(req: Request, response: Response) {
   const result = await deleteUserUseCase.execute({ userId: params.userId });
 
   if (result.isFailure) {
-    const error = result.error;
-    if (error instanceof NotFoundError) {
-      throw errorService.notFound(error.message);
-    }
-    throw errorService.internal();
+    throw mapAppErrorToHttp(result.error);
   }
 
   const deletedUser = existingUser;

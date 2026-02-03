@@ -13,13 +13,14 @@ import { RefreshTokenUseCase } from '@/modules/auth/application/use-cases/refres
 import { SwitchUserUseCase } from '@/modules/auth/application/use-cases/switch-user/switch-user.use-case';
 import { RegisterUserUseCase } from '@/modules/user/application/use-cases/register-user/register-user.use-case';
 import { PrismaUserRepository } from '@/modules/user/infrastructure/persistence/prisma-user.repository';
-import { ValidationError, NotFoundError } from '@/modules/shared/application/app-error';
+import { NotFoundError } from '@/modules/shared/application/app-error';
+import { mapAppErrorToHttp } from '@/modules/shared/application/app-error.mapper';
 import userService from '@/modules/user/user.service';
 import passwordHasherService from '@/modules/shared/services/password-hasher.service';
 
 const userRepository = new PrismaUserRepository();
 const registerUserUseCase = new RegisterUserUseCase(userRepository, passwordHasherService);
-const loginUseCase = new LoginUseCase(userRepository, tokenService);
+const loginUseCase = new LoginUseCase(userRepository, tokenService, passwordHasherService);
 const refreshTokenUseCase = new RefreshTokenUseCase(tokenService);
 const switchUserUseCase = new SwitchUserUseCase(userRepository, tokenService);
 
@@ -41,14 +42,7 @@ async function register(req: Request, response: Response) {
   });
 
   if (result.isFailure) {
-    const error = result.error;
-    if (error instanceof ValidationError) {
-      if (error.message.includes('exists')) {
-        throw errorService.conflict(error.message);
-      }
-      throw errorService.badRequest(error.message);
-    }
-    throw errorService.internal();
+    throw mapAppErrorToHttp(result.error);
   }
 
   const user = await userService.findUserById(result.getValue().id);
@@ -74,11 +68,7 @@ async function login(req: Request, response: Response) {
   const result = await loginUseCase.execute({ email: data.email, password: data.password });
 
   if (result.isFailure) {
-    const error = result.error;
-    if (error instanceof ValidationError) {
-      throw errorService.badRequest(error.message);
-    }
-    throw errorService.internal();
+    throw mapAppErrorToHttp(result.error);
   }
 
   const payload = result.getValue();
@@ -125,7 +115,7 @@ async function switchUser(req: Request, response: Response) {
     if (error instanceof NotFoundError) {
       throw errorService.badRequest(error.message);
     }
-    throw errorService.internal();
+    throw mapAppErrorToHttp(error);
   }
 
   const payload = result.getValue();
