@@ -3,16 +3,6 @@ export interface DeleteResumeRequestDto {
   userId: string;
 }
 
-import { ResumeData } from '@hirely/resume-core';
+import { ResumeDto } from '../../resume.dto';
 
-export interface DeleteResumeResponseDto {
-  id: string;
-  name: string;
-  data: ResumeData;
-  templateId: string;
-  templateVersion?: string | null;
-  themeConfig?: unknown;
-  userId: string;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
+export type DeleteResumeResponseDto = ResumeDto;

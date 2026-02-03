@@ -1,5 +1,7 @@
 import { DeleteResumeRequestDto, DeleteResumeResponseDto } from './delete-resume.dto';
 
+import { ResumeDtoMapper } from '../../mappers/resume.dto.mapper';
+
 import { IResumeRepository } from '@/modules/resume/domain/repositories/resume.repository.interface';
 import { NotFoundError, UnexpectedError } from '@/modules/shared/application/app-error';
 import { UseCase } from '@/modules/shared/application/use-case.interface';
@@ -20,17 +22,7 @@ export class DeleteResumeUseCase implements UseCase<DeleteResumeRequestDto, Dele
 
       await this.resumeRepository.delete(request.resumeId, request.userId);
 
-      return Result.ok({
-        id: resume.id,
-        name: resume.name.value,
-        data: resume.data,
-        templateId: resume.templateId,
-        templateVersion: resume.templateVersion,
-        themeConfig: resume.themeConfig,
-        userId: resume.userId,
-        createdAt: resume.createdAt,
-        updatedAt: resume.updatedAt,
-      });
+      return Result.ok(ResumeDtoMapper.toResponse(resume));
     } catch (err) {
       return Result.fail(new UnexpectedError(err));
     }

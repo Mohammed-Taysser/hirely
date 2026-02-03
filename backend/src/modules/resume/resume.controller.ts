@@ -3,7 +3,12 @@ import { StatusCodes } from 'http-status-codes';
 
 import type { ResumeDTO } from './resume.dto';
 import resumeService from './resume.service';
-import { getResumeExportsFilter, getResumesFilter, getResumeSnapshotsFilter } from './resume.utils';
+import {
+  getResumeExportsFilter,
+  getResumesFilter,
+  getResumeSnapshotsFilter,
+  normalizeResumeData,
+} from './resume.utils';
 
 import errorService from '@/modules/shared/services/error.service';
 import responseService from '@/modules/shared/services/response.service';
@@ -235,7 +240,7 @@ async function createResume(req: Request, response: Response) {
     templateId: body.templateId,
     templateVersion: body.templateVersion,
     themeConfig: body.themeConfig,
-    data: body.data,
+    data: normalizeResumeData(body.data),
   });
 
   if (result.isFailure) {
@@ -264,7 +269,7 @@ async function updateResume(req: Request, response: Response) {
     resumeId,
     userId: request.user.id,
     name: body.name,
-    data: body.data,
+    data: body.data ? normalizeResumeData(body.data) : undefined,
     templateId: body.templateId,
     templateVersion: body.templateVersion,
     themeConfig: body.themeConfig,

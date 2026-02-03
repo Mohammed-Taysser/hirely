@@ -16,7 +16,9 @@
     "noImplicitAny": true,
     "paths": {
       "@/*": ["*"],
-      "@generated-prisma": ["../prisma/generated"]
+      "@generated-prisma": ["../prisma/generated"],
+      "@hirely/resume-core": ["../../packages/resume-core/dist"],
+      "@hirely/resume-templates": ["../../packages/resume-templates/dist"]
     }
   },
   "include": ["src", "prisma"],

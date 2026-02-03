@@ -1,4 +1,5 @@
 import { ResumeData } from '@hirely/resume-core';
+import { ResumeDto } from '../../resume.dto';
 
 export interface UpdateResumeRequestDto {
   resumeId: string;
@@ -10,14 +11,4 @@ export interface UpdateResumeRequestDto {
   themeConfig?: unknown;
 }
 
-export interface UpdateResumeResponseDto {
-  id: string;
-  name: string;
-  data: ResumeData;
-  templateId: string;
-  templateVersion?: string | null;
-  themeConfig?: unknown;
-  userId: string;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
+export type UpdateResumeResponseDto = ResumeDto;

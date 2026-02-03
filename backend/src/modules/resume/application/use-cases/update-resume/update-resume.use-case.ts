@@ -1,5 +1,7 @@
 import { UpdateResumeRequestDto, UpdateResumeResponseDto } from './update-resume.dto';
 
+import { ResumeDtoMapper } from '../../mappers/resume.dto.mapper';
+
 import { IResumeRepository } from '@/modules/resume/domain/repositories/resume.repository.interface';
 import { ResumeName } from '@/modules/resume/domain/value-objects/resume-name.vo';
 import {
@@ -48,17 +50,7 @@ export class UpdateResumeUseCase implements UseCase<UpdateResumeRequestDto, Upda
 
       await this.resumeRepository.save(resume);
 
-      return Result.ok({
-        id: resume.id,
-        name: resume.name.value,
-        data: resume.data,
-        templateId: resume.templateId,
-        templateVersion: resume.templateVersion,
-        themeConfig: resume.themeConfig,
-        userId: resume.userId,
-        createdAt: resume.createdAt,
-        updatedAt: resume.updatedAt,
-      });
+      return Result.ok(ResumeDtoMapper.toResponse(resume));
     } catch (err) {
       return Result.fail(new UnexpectedError(err));
     }
