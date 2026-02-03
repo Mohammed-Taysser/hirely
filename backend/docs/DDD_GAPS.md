@@ -18,15 +18,14 @@ Before proceeding, we have identified several missing components required to ful
 
 ## 3. Resume Module
 
-**Current Status:** `CreateResumeUseCase`, `UpdateResumeUseCase`, and `DeleteResumeUseCase` are implemented.
+**Current Status:** `CreateResumeUseCase`, `UpdateResumeUseCase`, `DeleteResumeUseCase`, `CreateResumeSnapshotUseCase`, and `ExportResumeUseCase` are implemented.
 **Missing:**
 
-- **`CreateResumeSnapshotUseCase`**: Handles versioning.
-- **`ExportResumeUseCase`**: Handles PDF/Export generation logic.
+- **Remaining Export Flows**: Optional follow-up for queued exports and status queries if you want them fully in the Application layer too.
 
 ## 4. Technical Constraints / Issues
 
-- **Direct Infrastructure Dependency**: The `RegisterUserUseCase` imports `tokenService` directly. ideally, an `IPasswordHasher` interface should be defined in the Domain/Application layer and injected, abiding by the Dependency Inversion Principle.
+- **Password Hashing Abstraction**: Added `IPasswordHasher`, but remaining use cases still use `tokenService` for comparison.
 - **Legacy Build Errors**: As noted, the build fails due to unrelated legacy files. These might become blockers if we try to switch the main entry point to the new code without cleaning them up.
 - **Controller Integration**: Continue migrating remaining controllers to use application-layer use cases instead of services.
 

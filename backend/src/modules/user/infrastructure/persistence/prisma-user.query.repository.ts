@@ -31,4 +31,11 @@ export class PrismaUserQueryRepository implements IUserQueryRepository {
   async getBasicUsers(filters: Prisma.UserWhereInput): Promise<UserBasicDto[]> {
     return prisma.user.findMany({ select: userSelect.basic, where: filters });
   }
+
+  async findById(id: string): Promise<UserFullDto | null> {
+    return prisma.user.findUnique({
+      where: { id },
+      select: userSelect.full,
+    });
+  }
 }

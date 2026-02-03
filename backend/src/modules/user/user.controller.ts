@@ -17,6 +17,7 @@ import { PrismaUserRepository } from '@/modules/user/infrastructure/persistence/
 import { PrismaUserQueryRepository } from '@/modules/user/infrastructure/persistence/prisma-user.query.repository';
 import planService from '@/modules/plan/plan.service';
 import { NotFoundError, ValidationError } from '@/modules/shared/application/app-error';
+import passwordHasherService from '@/modules/shared/services/password-hasher.service';
 
 const userRepository = new PrismaUserRepository();
 const userQueryRepository = new PrismaUserQueryRepository();
@@ -25,7 +26,7 @@ const getUsersListUseCase = new GetUsersListUseCase(userQueryRepository);
 const findUserByIdUseCase = new FindUserByIdUseCase(userRepository);
 const updateUserUseCase = new UpdateUserUseCase(userRepository);
 const deleteUserUseCase = new DeleteUserUseCase(userRepository);
-const registerUserUseCase = new RegisterUserUseCase(userRepository);
+const registerUserUseCase = new RegisterUserUseCase(userRepository, passwordHasherService);
 
 async function getUsers(req: Request, response: Response) {
   const request = req as TypedAuthenticatedRequest<UserDTO['getUsersList']>;
@@ -102,7 +103,11 @@ async function getUserById(req: Request, response: Response) {
     throw errorService.internal();
   }
 
-  const user = result.getValue();
+  const user = await userQueryRepository.findById(result.getValue().id);
+
+  if (!user) {
+    throw errorService.notFound('User not found');
+  }
 
   responseService.success(response, {
     message: 'User fetched successfully',
@@ -139,7 +144,11 @@ async function createUser(req: Request, response: Response) {
     throw errorService.internal();
   }
 
-  const newUser = result.getValue();
+  const newUser = await userQueryRepository.findById(result.getValue().id);
+
+  if (!newUser) {
+    throw errorService.internal('Failed to load created user');
+  }
 
   responseService.success(response, {
     message: 'User created successfully',
@@ -152,12 +161,6 @@ async function updateUser(req: Request, response: Response) {
   const request = req as TypedAuthenticatedRequest<UserDTO['updateUser']>;
 
   const { parsedBody: body, parsedParams: params, user: authUser } = request;
-
-  const user = await userService.findUserById(params.userId);
-
-  if (!user) {
-    throw errorService.notFound('User not found');
-  }
 
   if (params.userId !== authUser.id) {
     throw errorService.forbidden('You do not have permission to update this user');
@@ -180,7 +183,11 @@ async function updateUser(req: Request, response: Response) {
     throw errorService.internal();
   }
 
-  const updatedUser = result.getValue();
+  const updatedUser = await userQueryRepository.findById(result.getValue().id);
+
+  if (!updatedUser) {
+    throw errorService.internal('Failed to load updated user');
+  }
 
   responseService.success(response, {
     message: 'User updated successfully',
@@ -197,6 +204,12 @@ async function deleteUser(req: Request, response: Response) {
     throw errorService.forbidden('You do not have permission to delete this user');
   }
 
+  const existingUser = await userQueryRepository.findById(params.userId);
+
+  if (!existingUser) {
+    throw errorService.notFound('User not found');
+  }
+
   const result = await deleteUserUseCase.execute({ userId: params.userId });
 
   if (result.isFailure) {
@@ -207,7 +220,7 @@ async function deleteUser(req: Request, response: Response) {
     throw errorService.internal();
   }
 
-  const deletedUser = result.getValue();
+  const deletedUser = existingUser;
 
   responseService.success(response, {
     message: 'User deleted successfully',

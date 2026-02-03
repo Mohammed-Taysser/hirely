@@ -14,7 +14,7 @@ We have successfully migrated the `User` and `Resume` modules to a Domain-Driven
 
 ### 2. Application Layer (The Orchestrator)
 
-- **Use Cases:** `RegisterUserUseCase`, `CreateResumeUseCase`, `FindUserByIdUseCase`, `FindResumeByIdUseCase`, `GetUsersUseCase`, `GetUsersListUseCase`, `RefreshTokenUseCase`, `SwitchUserUseCase`
+- **Use Cases:** `RegisterUserUseCase`, `CreateResumeUseCase`, `FindUserByIdUseCase`, `FindResumeByIdUseCase`, `GetUsersUseCase`, `GetUsersListUseCase`, `RefreshTokenUseCase`, `SwitchUserUseCase`, `CreateResumeSnapshotUseCase`, `ExportResumeUseCase`
 - **Pattern:** All business logic is encapsulated in use cases that orchestrate entities and repositories.
 - **Error Handling:** Standardized `Result<T, E>` pattern and typed `AppError` hierarchy (`ValidationError`, `UnexpectedError`).
 

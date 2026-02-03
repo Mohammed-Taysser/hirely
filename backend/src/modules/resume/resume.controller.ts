@@ -1,8 +1,6 @@
 import { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 
-import { exportService } from '../export/export.service';
-
 import type { ResumeDTO } from './resume.dto';
 import resumeService from './resume.service';
 import { getResumeExportsFilter, getResumesFilter, getResumeSnapshotsFilter } from './resume.utils';
@@ -15,15 +13,24 @@ import { FindResumeByIdUseCase } from '@/modules/resume/application/use-cases/fi
 import { CreateResumeUseCase } from '@/modules/resume/application/use-cases/create-resume/create-resume.use-case';
 import { UpdateResumeUseCase } from '@/modules/resume/application/use-cases/update-resume/update-resume.use-case';
 import { DeleteResumeUseCase } from '@/modules/resume/application/use-cases/delete-resume/delete-resume.use-case';
+import { CreateResumeSnapshotUseCase } from '@/modules/resume/application/use-cases/create-resume-snapshot/create-resume-snapshot.use-case';
+import { ExportResumeUseCase } from '@/modules/resume/application/use-cases/export-resume/export-resume.use-case';
 import { PrismaResumeRepository } from '@/modules/resume/infrastructure/persistence/prisma-resume.repository';
-import { ResumeDtoMapper } from '@/modules/resume/application/mappers/resume.dto.mapper';
+import { PrismaResumeQueryRepository } from '@/modules/resume/infrastructure/persistence/prisma-resume.query.repository';
+import { PrismaResumeSnapshotRepository } from '@/modules/resume/infrastructure/persistence/prisma-resume-snapshot.repository';
+import { ResumeExportService } from '@/modules/resume/infrastructure/services/resume-export.service';
 import { NotFoundError, ValidationError } from '@/modules/shared/application/app-error';
 
 const resumeRepository = new PrismaResumeRepository();
+const resumeQueryRepository = new PrismaResumeQueryRepository();
+const resumeSnapshotRepository = new PrismaResumeSnapshotRepository();
+const resumeExportService = new ResumeExportService();
 const findResumeByIdUseCase = new FindResumeByIdUseCase(resumeRepository);
 const createResumeUseCase = new CreateResumeUseCase(resumeRepository);
 const updateResumeUseCase = new UpdateResumeUseCase(resumeRepository);
 const deleteResumeUseCase = new DeleteResumeUseCase(resumeRepository);
+const createResumeSnapshotUseCase = new CreateResumeSnapshotUseCase(resumeSnapshotRepository);
+const exportResumeUseCase = new ExportResumeUseCase(resumeExportService);
 
 async function getResumes(req: Request, response: Response) {
   const request = req as TypedAuthenticatedRequest<ResumeDTO['getResumesList']>;
@@ -77,7 +84,11 @@ async function getResumeById(req: Request, response: Response) {
     throw errorService.internal();
   }
 
-  const resume = result.getValue();
+  const resume = await resumeQueryRepository.findById(resumeId, request.user.id);
+
+  if (!resume) {
+    throw errorService.notFound('Resume not found');
+  }
 
   responseService.success(response, {
     message: 'Resume fetched successfully',
@@ -135,11 +146,22 @@ async function exportResume(req: Request, response: Response) {
   const request = req as TypedAuthenticatedRequest<ResumeDTO['exportResume']>;
   const { resumeId } = request.parsedParams;
 
-  const result = await exportService.generatePdfBuffer(request.user.id, resumeId);
+  const result = await exportResumeUseCase.execute({
+    userId: request.user.id,
+    resumeId,
+  });
+
+  if (result.isFailure) {
+    const error = result.error;
+    if (error instanceof NotFoundError) {
+      throw errorService.notFound(error.message);
+    }
+    throw errorService.internal();
+  }
 
   response.setHeader('Content-Type', 'application/pdf');
   response.setHeader('Content-Disposition', `attachment; filename="resume-${resumeId}.pdf"`);
-  response.status(200).send(result.pdfBuffer);
+  response.status(200).send(result.getValue().pdfBuffer);
 }
 
 async function enqueueExport(req: Request, response: Response) {
@@ -204,7 +226,11 @@ async function createResume(req: Request, response: Response) {
     throw errorService.internal();
   }
 
-  const resume = ResumeDtoMapper.toResponse(result.getValue());
+  const resume = await resumeQueryRepository.findById(result.getValue().id, request.user.id);
+
+  if (!resume) {
+    throw errorService.internal('Failed to load created resume');
+  }
 
   responseService.success(response, {
     message: 'Resume created successfully',
@@ -239,12 +265,23 @@ async function updateResume(req: Request, response: Response) {
     throw errorService.internal();
   }
 
-  const updatedResume = result.getValue();
+  const updatedResume = await resumeQueryRepository.findById(resumeId, request.user.id);
 
-  const snapshot = await resumeService.createSnapshot(request.user.id, resumeId);
+  if (!updatedResume) {
+    throw errorService.internal('Failed to load updated resume');
+  }
 
-  if (!snapshot) {
-    throw errorService.notFound('Resume snapshot not found');
+  const snapshotResult = await createResumeSnapshotUseCase.execute({
+    userId: request.user.id,
+    resumeId,
+  });
+
+  if (snapshotResult.isFailure) {
+    const error = snapshotResult.error;
+    if (error instanceof NotFoundError) {
+      throw errorService.notFound(error.message);
+    }
+    throw errorService.internal();
   }
 
   responseService.success(response, {
@@ -256,6 +293,12 @@ async function updateResume(req: Request, response: Response) {
 async function deleteResume(req: Request, response: Response) {
   const request = req as TypedAuthenticatedRequest<ResumeDTO['getResumeById']>;
   const { resumeId } = request.parsedParams;
+
+  const existing = await resumeQueryRepository.findById(resumeId, request.user.id);
+
+  if (!existing) {
+    throw errorService.notFound('Resume not found');
+  }
 
   const result = await deleteResumeUseCase.execute({
     resumeId,
@@ -270,7 +313,7 @@ async function deleteResume(req: Request, response: Response) {
     throw errorService.internal();
   }
 
-  const deleted = result.getValue();
+  const deleted = existing;
 
   responseService.success(response, {
     message: 'Resume deleted successfully',

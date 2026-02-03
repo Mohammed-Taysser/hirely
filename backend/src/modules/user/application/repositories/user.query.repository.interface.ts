@@ -12,4 +12,5 @@ export interface IUserQueryRepository {
     filters: Prisma.UserWhereInput
   ): Promise<[UserFullDto[], number]>;
   getBasicUsers(filters: Prisma.UserWhereInput): Promise<UserBasicDto[]>;
+  findById(id: string): Promise<UserFullDto | null>;
 }

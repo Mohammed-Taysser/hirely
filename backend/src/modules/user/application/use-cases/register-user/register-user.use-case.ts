@@ -9,14 +9,17 @@ import { UserDto } from '../../user.dto';
 import { RegisterUserRequestDto } from './register-user.dto';
 
 import { UnexpectedError, ValidationError } from '@/modules/shared/application/app-error';
+import { IPasswordHasher } from '@/modules/shared/application/services/password-hasher.service.interface';
 import { UseCase } from '@/modules/shared/application/use-case.interface';
 import { Result } from '@/modules/shared/domain';
-import tokenService from '@/modules/shared/services/token.service';
 
 export type RegisterUserResponse = Result<UserDto, ValidationError | UnexpectedError>;
 
 export class RegisterUserUseCase implements UseCase<RegisterUserRequestDto, RegisterUserResponse> {
-  constructor(private readonly userRepository: IUserRepository) {}
+  constructor(
+    private readonly userRepository: IUserRepository,
+    private readonly passwordHasher: IPasswordHasher
+  ) {}
 
   public async execute(request: RegisterUserRequestDto): Promise<RegisterUserResponse> {
     const emailResult = UserEmail.create(request.email);
@@ -40,7 +43,7 @@ export class RegisterUserUseCase implements UseCase<RegisterUserRequestDto, Regi
         return Result.fail(new ValidationError('User already exists'));
       }
 
-      const hashedPassword = await tokenService.hash(password.value);
+      const hashedPassword = await this.passwordHasher.hash(password.value);
       const hashedUserPassword = UserPassword.create(hashedPassword, true).getValue();
 
       const userResult = User.register({

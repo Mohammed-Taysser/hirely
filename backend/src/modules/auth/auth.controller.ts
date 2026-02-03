@@ -15,9 +15,10 @@ import { RegisterUserUseCase } from '@/modules/user/application/use-cases/regist
 import { PrismaUserRepository } from '@/modules/user/infrastructure/persistence/prisma-user.repository';
 import { ValidationError, NotFoundError } from '@/modules/shared/application/app-error';
 import userService from '@/modules/user/user.service';
+import passwordHasherService from '@/modules/shared/services/password-hasher.service';
 
 const userRepository = new PrismaUserRepository();
-const registerUserUseCase = new RegisterUserUseCase(userRepository);
+const registerUserUseCase = new RegisterUserUseCase(userRepository, passwordHasherService);
 const loginUseCase = new LoginUseCase(userRepository, tokenService);
 const refreshTokenUseCase = new RefreshTokenUseCase(tokenService);
 const switchUserUseCase = new SwitchUserUseCase(userRepository, tokenService);

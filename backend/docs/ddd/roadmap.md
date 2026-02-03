@@ -25,6 +25,9 @@ This document tracks the progress of implementing DDD principles in the Hirely a
 - [x] **Step 7: Application Layer - Auth Use Cases**
   - Add refresh token and user switching use cases.
   - Wire auth flows through the application layer.
+- [x] **Step 8: Application Layer - Resume Snapshots & Exports**
+  - Add resume snapshot creation and export use cases.
+  - Wire resume export flows through the application layer.
 
 ---
 
@@ -39,3 +42,4 @@ Detailed reports for each step:
 5. [Step 5: Communication - Domain Events](./step-5-communication-domain-events.md)
 6. [Step 6: Application Layer - Query Use Cases](./step-6-application-layer-queries.md)
 7. [Step 7: Application Layer - Auth Use Cases](./step-7-application-layer-auth-use-cases.md)
+8. [Step 8: Application Layer - Resume Snapshots & Exports](./step-8-application-layer-resume-exports.md)
