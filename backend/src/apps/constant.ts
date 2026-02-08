@@ -39,6 +39,7 @@ const RATE_LIMITS: Record<RateLimitKeys, RateLimitConfig> = {
 const QUEUE_NAMES = {
   pdf: 'pdf-generation',
   email: 'email-delivery',
+  planChanges: 'plan-changes',
 };
 
 export { BODY_LIMIT, EXPORT_EXPIRY_DAYS_FREE, EXPORT_EXPIRY_DAYS_PAID, QUEUE_NAMES, RATE_LIMITS };

@@ -385,6 +385,10 @@ paths:
                   type: string
                   minLength: 2
                   maxLength: 50
+                scheduleAt:
+                  type: string
+                  format: date-time
+                  description: Optional future time to schedule the plan change
       responses:
         '200':
           description: Plan updated
@@ -1242,6 +1246,14 @@ components:
         planId:
           type: string
           format: uuid
+        pendingPlanId:
+          type: string
+          format: uuid
+          nullable: true
+        pendingPlanAt:
+          type: string
+          format: date-time
+          nullable: true
         plan:
           $ref: '#/components/schemas/Plan'
         isVerified:

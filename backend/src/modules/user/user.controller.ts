@@ -189,6 +189,7 @@ async function changeUserPlan(req: Request, response: Response) {
   const result = await changeUserPlanUseCase.execute({
     userId: params.userId,
     planCode: body.planCode,
+    scheduleAt: body.scheduleAt,
   });
 
   if (result.isFailure) {

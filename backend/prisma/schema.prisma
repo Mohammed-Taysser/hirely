@@ -22,8 +22,10 @@ model User {
   resetToken          String?
   resetTokenExpiresAt DateTime?
 
-  planId String
-  plan   Plan   @relation("UserPlan", fields: [planId], references: [id], onDelete: Restrict)
+  planId        String
+  plan          Plan      @relation("UserPlan", fields: [planId], references: [id], onDelete: Restrict)
+  pendingPlanId String?
+  pendingPlanAt DateTime?
 
   resumes    Resume[]
   snapshots  ResumeSnapshot[]
@@ -35,11 +37,13 @@ model User {
 
   @@index([email])
   @@index([planId])
+  @@index([pendingPlanId])
+  @@index([pendingPlanAt])
   @@index([createdAt])
 }
 
 model Resume {
-  id              String @id @default(uuid())
+  id              String  @id @default(uuid())
   name            String
   data            Json
   templateId      String

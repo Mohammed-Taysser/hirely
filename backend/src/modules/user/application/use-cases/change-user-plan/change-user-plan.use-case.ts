@@ -30,6 +30,15 @@ export class ChangeUserPlanUseCase
       return Result.fail(new ValidationError('Plan code is required'));
     }
 
+    let scheduledAt: Date | null = null;
+    if (request.scheduleAt) {
+      const parsed = new Date(request.scheduleAt);
+      if (Number.isNaN(parsed.getTime())) {
+        return Result.fail(new ValidationError('scheduleAt must be a valid ISO date'));
+      }
+      scheduledAt = parsed;
+    }
+
     try {
       const plan = await this.planQueryRepository.findByCode(request.planCode.trim());
       if (!plan) {
@@ -41,7 +50,11 @@ export class ChangeUserPlanUseCase
         return Result.fail(new NotFoundError('User not found'));
       }
 
-      user.changePlan(plan.id);
+      if (scheduledAt && scheduledAt.getTime() > Date.now()) {
+        user.schedulePlanChange(plan.id, scheduledAt);
+      } else {
+        user.changePlan(plan.id);
+      }
       await this.userRepository.save(user);
 
       const updated = await this.userQueryRepository.findById(user.id);

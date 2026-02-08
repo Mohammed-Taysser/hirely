@@ -61,6 +61,9 @@ const envSchema = z.object({
 
   // Resume limits
   MAX_RESUME_SECTIONS: z.coerce.number().int().positive().max(50).default(20),
+
+  // Scheduled plan changes
+  PLAN_CHANGE_INTERVAL_SECONDS: z.coerce.number().int().positive().default(300),
 });
 
 /* ----------------------------- Validate Config ---------------------------- */

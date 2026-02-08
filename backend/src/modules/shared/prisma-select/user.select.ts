@@ -12,6 +12,8 @@ class UserSelect {
     updatedAt: true,
     email: true,
     planId: true,
+    pendingPlanId: true,
+    pendingPlanAt: true,
     plan: {
       select: {
         id: true,

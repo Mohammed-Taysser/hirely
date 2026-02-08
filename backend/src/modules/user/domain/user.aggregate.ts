@@ -10,6 +10,8 @@ export interface UserProps {
   name: UserName;
   password: UserPassword;
   planId: string;
+  pendingPlanId?: string | null;
+  pendingPlanAt?: Date | null;
   isVerified: boolean;
   isDeleted: boolean;
   createdAt?: Date;
@@ -28,6 +30,12 @@ export class User extends AggregateRoot<UserProps> {
   }
   get planId(): string {
     return this.props.planId;
+  }
+  get pendingPlanId(): string | null | undefined {
+    return this.props.pendingPlanId;
+  }
+  get pendingPlanAt(): Date | null | undefined {
+    return this.props.pendingPlanAt;
   }
   get isVerified(): boolean {
     return this.props.isVerified;
@@ -52,6 +60,8 @@ export class User extends AggregateRoot<UserProps> {
         ...props,
         isVerified: props.isVerified ?? false,
         isDeleted: props.isDeleted ?? false,
+        pendingPlanId: props.pendingPlanId ?? null,
+        pendingPlanAt: props.pendingPlanAt ?? null,
         createdAt: props.createdAt ?? new Date(),
         updatedAt: props.updatedAt ?? new Date(),
       },
@@ -91,6 +101,14 @@ export class User extends AggregateRoot<UserProps> {
 
   public changePlan(newPlanId: string): void {
     this.props.planId = newPlanId;
+    this.props.pendingPlanId = null;
+    this.props.pendingPlanAt = null;
+    this.props.updatedAt = new Date();
+  }
+
+  public schedulePlanChange(newPlanId: string, at: Date): void {
+    this.props.pendingPlanId = newPlanId;
+    this.props.pendingPlanAt = at;
     this.props.updatedAt = new Date();
   }
 

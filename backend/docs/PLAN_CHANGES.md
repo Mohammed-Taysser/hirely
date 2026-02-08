@@ -6,9 +6,11 @@ This feature allows a user to change their plan by plan code (e.g., `FREE`, `PRO
 
 ## Current Behavior (MVP)
 
-- Plan changes are **immediate**.
+- Plan changes are **immediate** by default.
+- Optional scheduling via `scheduleAt` (future ISO date).
+- Scheduled plan changes are applied by a BullMQ worker every `PLAN_CHANGE_INTERVAL_SECONDS` (default 300s).
 - No billing provider integration yet.
-- No proration or scheduled downgrades.
+- No proration or billing-cycle alignment.
 - User can only change **their own** plan.
 
 ## API
@@ -21,13 +23,17 @@ This feature allows a user to change their plan by plan code (e.g., `FREE`, `PRO
 
 ```json
 {
-  "planCode": "PRO"
+  "planCode": "PRO",
+  "scheduleAt": "2026-02-10T12:00:00.000Z"
 }
 ```
 
 ### Response
 
 Returns the updated user payload (full user DTO).
+
+If `scheduleAt` is in the future, the plan change is stored as `pendingPlanId` and
+`pendingPlanAt`, and the user’s `planId` remains unchanged until applied.
 
 ### Errors
 
@@ -43,7 +49,7 @@ Returns the updated user payload (full user DTO).
 
 ## Future Enhancements
 
-- Scheduled downgrades at end of billing cycle
+- Scheduled downgrades aligned to billing cycle
 - Billing provider integration (Stripe/Paddle)
 - Plan change history table
 - Proration rules

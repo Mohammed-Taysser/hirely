@@ -16,6 +16,8 @@ export interface UserFullDto extends UserBasicDto {
   updatedAt: Date;
   email: string;
   planId: string;
+  pendingPlanId?: string | null;
+  pendingPlanAt?: Date | null;
   plan?: UserPlanDto | null;
   isVerified: boolean;
   isDeleted: boolean;

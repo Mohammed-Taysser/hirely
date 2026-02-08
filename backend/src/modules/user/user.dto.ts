@@ -36,6 +36,7 @@ const changeUserPlanSchema = {
   params: getUserByIdSchema.params,
   body: z.object({
     planCode: z.string().trim().min(2).max(50),
+    scheduleAt: z.string().datetime().optional(),
   }),
 };
 
