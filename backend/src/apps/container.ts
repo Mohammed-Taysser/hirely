@@ -50,6 +50,7 @@ import { GetUserByIdQueryUseCase } from '@/modules/user/application/use-cases/ge
 import { GetUsersListUseCase } from '@/modules/user/application/use-cases/get-users-list/get-users-list.use-case';
 import { GetUsersUseCase } from '@/modules/user/application/use-cases/get-users/get-users.use-case';
 import { CreateUserWithPlanUseCase } from '@/modules/user/application/use-cases/create-user-with-plan/create-user-with-plan.use-case';
+import { ChangeUserPlanUseCase } from '@/modules/user/application/use-cases/change-user-plan/change-user-plan.use-case';
 import { RegisterUserUseCase } from '@/modules/user/application/use-cases/register-user/register-user.use-case';
 import { UpdateUserUseCase } from '@/modules/user/application/use-cases/update-user/update-user.use-case';
 import { PrismaUserQueryRepository } from '@/modules/user/infrastructure/persistence/prisma-user.query.repository';
@@ -107,6 +108,11 @@ const getUsersUseCase = new GetUsersUseCase(userQueryRepository);
 const getUsersListUseCase = new GetUsersListUseCase(userQueryRepository);
 const updateUserUseCase = new UpdateUserUseCase(userRepository, userQueryRepository);
 const deleteUserUseCase = new DeleteUserUseCase(userRepository, userQueryRepository);
+const changeUserPlanUseCase = new ChangeUserPlanUseCase(
+  userRepository,
+  userQueryRepository,
+  planQueryRepository
+);
 const getUserByIdQueryUseCase = new GetUserByIdQueryUseCase(userQueryRepository);
 
 const getPlansUseCase = new GetPlansUseCase(planQueryRepository);
@@ -169,6 +175,7 @@ const userContainer = {
   getUsersListUseCase,
   updateUserUseCase,
   deleteUserUseCase,
+  changeUserPlanUseCase,
   getUserByIdQueryUseCase,
   createUserWithPlanUseCase,
 };

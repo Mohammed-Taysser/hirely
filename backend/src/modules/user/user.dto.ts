@@ -32,11 +32,19 @@ const updateUserSchema = {
   }),
 };
 
+const changeUserPlanSchema = {
+  params: getUserByIdSchema.params,
+  body: z.object({
+    planCode: z.string().trim().min(2).max(50),
+  }),
+};
+
 const userDTO = {
   createUser: createUserSchema,
   getUsersList: getUsersListSchema,
   getUserById: getUserByIdSchema,
   updateUser: updateUserSchema,
+  changeUserPlan: changeUserPlanSchema,
 };
 
 export type UserDTO = {
@@ -44,6 +52,7 @@ export type UserDTO = {
   getUsersList: typeof getUsersListSchema;
   getUserById: typeof getUserByIdSchema;
   updateUser: typeof updateUserSchema;
+  changeUserPlan: typeof changeUserPlanSchema;
 };
 
 export default userDTO;

@@ -4,11 +4,11 @@ import { StatusCodes } from 'http-status-codes';
 import type { UserDTO } from './user.dto';
 import { getUsersFilter } from './user.utils';
 
+import { userContainer } from '@/apps/container';
+import { mapAppErrorToHttp } from '@/modules/shared/presentation/app-error.mapper';
 import errorService from '@/modules/shared/services/error.service';
 import responseService from '@/modules/shared/services/response.service';
 import { TypedAuthenticatedRequest } from '@/modules/shared/types/import';
-import { mapAppErrorToHttp } from '@/modules/shared/presentation/app-error.mapper';
-import { userContainer } from '@/apps/container';
 import { UserProfileDto } from '@/modules/user/application/user-profile.dto';
 
 const {
@@ -16,6 +16,7 @@ const {
   getUsersListUseCase,
   updateUserUseCase,
   deleteUserUseCase,
+  changeUserPlanUseCase,
   getUserByIdQueryUseCase,
   createUserWithPlanUseCase,
 } = userContainer;
@@ -176,6 +177,30 @@ async function deleteUser(req: Request, response: Response) {
   });
 }
 
+async function changeUserPlan(req: Request, response: Response) {
+  const request = req as TypedAuthenticatedRequest<UserDTO['changeUserPlan']>;
+
+  const { parsedParams: params, parsedBody: body, user: authUser } = request;
+
+  if (params.userId !== authUser.id) {
+    throw errorService.forbidden('You do not have permission to change this user plan');
+  }
+
+  const result = await changeUserPlanUseCase.execute({
+    userId: params.userId,
+    planCode: body.planCode,
+  });
+
+  if (result.isFailure) {
+    throw mapAppErrorToHttp(result.error);
+  }
+
+  responseService.success(response, {
+    message: 'Plan updated successfully',
+    data: result.getValue(),
+  });
+}
+
 const userController = {
   getUsers,
   getUsersList,
@@ -184,6 +209,7 @@ const userController = {
   createUser,
   updateUser,
   deleteUser,
+  changeUserPlan,
 };
 
 export default userController;

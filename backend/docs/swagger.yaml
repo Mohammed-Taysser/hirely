@@ -36,6 +36,8 @@ tags:
     description: Resume operations
   - name: ResumeTemplates
     description: Resume templates catalog
+  - name: Exports
+    description: Export status endpoints
 
 paths:
   /health:
@@ -364,6 +366,49 @@ paths:
                     properties:
                       data:
                         $ref: '#/components/schemas/User'
+
+  /users/{userId}/plan:
+    patch:
+      tags: [Users]
+      summary: Change user plan
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [planCode]
+              properties:
+                planCode:
+                  type: string
+                  minLength: 2
+                  maxLength: 50
+      responses:
+        '200':
+          description: Plan updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User or plan not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /plans:
     get:
@@ -789,6 +834,25 @@ paths:
               schema:
                 type: string
                 format: binary
+
+  /exports/{exportId}/status:
+    get:
+      tags: [Exports]
+      summary: Get export status
+      parameters:
+        - $ref: '#/components/parameters/ExportIdParam'
+      responses:
+        '200':
+          description: Export status
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ExportStatusResponse'
 
 components:
   securitySchemes:

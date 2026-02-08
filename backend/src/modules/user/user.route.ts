@@ -33,6 +33,12 @@ userRoutes.patch(
   validateRequest(userDTO.updateUser),
   controller.updateUser
 );
+userRoutes.patch(
+  '/:userId/plan',
+  authenticateMiddleware,
+  validateRequest(userDTO.changeUserPlan),
+  controller.changeUserPlan
+);
 userRoutes.delete(
   '/:userId',
   authenticateMiddleware,
