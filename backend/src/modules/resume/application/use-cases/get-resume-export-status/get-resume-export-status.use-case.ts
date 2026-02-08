@@ -1,10 +1,8 @@
 import { GetResumeExportStatusRequestDto } from './get-resume-export-status.dto';
 
 import { AppError, UnexpectedError } from '@/modules/shared/application/app-error';
-import { mapBaseErrorToAppError } from '@/modules/shared/application/app-error.mapper';
 import { UseCase } from '@/modules/shared/application/use-case.interface';
 import { Result } from '@/modules/shared/domain';
-import { BaseError } from '@/modules/shared/services/error.service';
 import {
   IResumeExportService,
   ResumeExportStatusResult,
@@ -12,9 +10,10 @@ import {
 
 type GetResumeExportStatusResponse = Result<ResumeExportStatusResult, AppError>;
 
-export class GetResumeExportStatusUseCase
-  implements UseCase<GetResumeExportStatusRequestDto, GetResumeExportStatusResponse>
-{
+export class GetResumeExportStatusUseCase implements UseCase<
+  GetResumeExportStatusRequestDto,
+  GetResumeExportStatusResponse
+> {
   constructor(private readonly resumeExportService: IResumeExportService) {}
 
   public async execute(
@@ -29,8 +28,8 @@ export class GetResumeExportStatusUseCase
 
       return Result.ok(status);
     } catch (err) {
-      if (err instanceof BaseError) {
-        return Result.fail(mapBaseErrorToAppError(err));
+      if (err instanceof AppError) {
+        return Result.fail(err);
       }
       return Result.fail(new UnexpectedError(err));
     }

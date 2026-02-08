@@ -16,4 +16,3 @@ resumeTemplateRoutes.get(
 );
 
 export default resumeTemplateRoutes;
-

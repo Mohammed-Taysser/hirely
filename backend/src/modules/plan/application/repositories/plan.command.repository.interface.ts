@@ -1,9 +1,11 @@
-import { Prisma } from '@generated-prisma';
-
-export type PlanCommandDto = Prisma.PlanGetPayload<{ include: { limits: true } }>;
+import { PlanDto } from '@/modules/plan/application/repositories/plan.query.repository.interface';
+import {
+  CreatePlanRequestDto,
+  UpdatePlanDataDto,
+} from '@/modules/plan/application/dto/plan-command.dto';
 
 export interface IPlanCommandRepository {
-  create(data: Prisma.PlanCreateInput): Promise<PlanCommandDto>;
-  update(id: string, data: Prisma.PlanUpdateInput): Promise<PlanCommandDto>;
-  delete(id: string): Promise<PlanCommandDto>;
+  create(data: CreatePlanRequestDto): Promise<PlanDto>;
+  update(id: string, data: UpdatePlanDataDto): Promise<PlanDto>;
+  delete(id: string): Promise<PlanDto>;
 }

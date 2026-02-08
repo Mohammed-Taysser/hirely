@@ -1,9 +1,10 @@
-import { Prisma } from '@generated-prisma';
-
-import { ResumeBasicDto } from '../../repositories/resume.query.repository.interface';
+import {
+  ResumeBasicDto,
+  ResumeQueryFilters,
+} from '../../repositories/resume.query.repository.interface';
 
 export interface GetResumesListRequestDto {
-  filters: Prisma.ResumeWhereInput;
+  filters: ResumeQueryFilters;
 }
 
 export type GetResumesListResponseDto = ResumeBasicDto[];

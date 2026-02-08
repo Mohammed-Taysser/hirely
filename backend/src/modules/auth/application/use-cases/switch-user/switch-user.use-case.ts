@@ -5,12 +5,14 @@ import { ITokenService } from '@/modules/shared/application/services/token.servi
 import { UseCase } from '@/modules/shared/application/use-case.interface';
 import { Result } from '@/modules/shared/domain';
 import { IUserRepository } from '@/modules/user/domain/repositories/user.repository.interface';
+import { IUserQueryRepository } from '@/modules/user/application/repositories/user.query.repository.interface';
 
 type SwitchUserResponse = Result<SwitchUserResponseDto, NotFoundError | UnexpectedError>;
 
 export class SwitchUserUseCase implements UseCase<SwitchUserRequestDto, SwitchUserResponse> {
   constructor(
     private readonly userRepository: IUserRepository,
+    private readonly userQueryRepository: IUserQueryRepository,
     private readonly tokenService: ITokenService
   ) {}
 
@@ -26,13 +28,13 @@ export class SwitchUserUseCase implements UseCase<SwitchUserRequestDto, SwitchUs
       const accessToken = this.tokenService.signAccessToken(payload);
       const refreshToken = this.tokenService.signRefreshToken(payload);
 
+      const fullUser = await this.userQueryRepository.findById(user.id);
+      if (!fullUser) {
+        return Result.fail(new NotFoundError('User not found'));
+      }
+
       return Result.ok({
-        user: {
-          id: user.id,
-          name: user.name.value,
-          email: user.email.value,
-          planId: user.planId,
-        },
+        user: fullUser,
         accessToken,
         refreshToken,
       });

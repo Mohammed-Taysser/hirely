@@ -1,10 +1,8 @@
 import { GetExportStatusRequestDto } from './get-export-status.dto';
 
 import { AppError, UnexpectedError } from '@/modules/shared/application/app-error';
-import { mapBaseErrorToAppError } from '@/modules/shared/application/app-error.mapper';
 import { UseCase } from '@/modules/shared/application/use-case.interface';
 import { Result } from '@/modules/shared/domain';
-import { BaseError } from '@/modules/shared/services/error.service';
 import {
   ExportStatusResult,
   IExportStatusService,
@@ -12,9 +10,10 @@ import {
 
 type GetExportStatusResponse = Result<ExportStatusResult, AppError>;
 
-export class GetExportStatusUseCase
-  implements UseCase<GetExportStatusRequestDto, GetExportStatusResponse>
-{
+export class GetExportStatusUseCase implements UseCase<
+  GetExportStatusRequestDto,
+  GetExportStatusResponse
+> {
   constructor(private readonly exportStatusService: IExportStatusService) {}
 
   public async execute(request: GetExportStatusRequestDto): Promise<GetExportStatusResponse> {
@@ -26,8 +25,8 @@ export class GetExportStatusUseCase
 
       return Result.ok(status);
     } catch (err) {
-      if (err instanceof BaseError) {
-        return Result.fail(mapBaseErrorToAppError(err));
+      if (err instanceof AppError) {
+        return Result.fail(err);
       }
       return Result.fail(new UnexpectedError(err));
     }

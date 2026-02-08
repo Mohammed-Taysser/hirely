@@ -10,14 +10,13 @@ import {
 
 type GetResumeByIdQueryResponse = Result<ResumeFullDto, NotFoundError | UnexpectedError>;
 
-export class GetResumeByIdQueryUseCase
-  implements UseCase<GetResumeByIdQueryRequestDto, GetResumeByIdQueryResponse>
-{
+export class GetResumeByIdQueryUseCase implements UseCase<
+  GetResumeByIdQueryRequestDto,
+  GetResumeByIdQueryResponse
+> {
   constructor(private readonly resumeQueryRepository: IResumeQueryRepository) {}
 
-  public async execute(
-    request: GetResumeByIdQueryRequestDto
-  ): Promise<GetResumeByIdQueryResponse> {
+  public async execute(request: GetResumeByIdQueryRequestDto): Promise<GetResumeByIdQueryResponse> {
     try {
       const resume = await this.resumeQueryRepository.findById(request.resumeId, request.userId);
 

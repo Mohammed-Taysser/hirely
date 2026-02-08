@@ -1,11 +1,12 @@
-import { Prisma } from '@generated-prisma';
-
-import { ResumeExportDto } from '../../repositories/resume-export.query.repository.interface';
+import {
+  ResumeExportDto,
+  ResumeExportQueryFilters,
+} from '../../repositories/resume-export.query.repository.interface';
 
 export interface GetResumeExportsRequestDto {
   page: number;
   limit: number;
-  filters: Prisma.ResumeExportWhereInput;
+  filters: ResumeExportQueryFilters;
 }
 
 export interface GetResumeExportsResponseDto {

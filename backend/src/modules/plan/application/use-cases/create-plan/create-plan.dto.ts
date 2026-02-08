@@ -1,3 +1,1 @@
-import { Prisma } from '@generated-prisma';
-
-export type CreatePlanRequestDto = Prisma.PlanCreateInput;
+export type { CreatePlanRequestDto } from '@/modules/plan/application/dto/plan-command.dto';

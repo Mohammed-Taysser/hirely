@@ -1,7 +1,5 @@
 import { UpdateResumeRequestDto, UpdateResumeResponseDto } from './update-resume.dto';
 
-import { ResumeDtoMapper } from '../../mappers/resume.dto.mapper';
-
 import { IResumeRepository } from '@/modules/resume/domain/repositories/resume.repository.interface';
 import { ResumeName } from '@/modules/resume/domain/value-objects/resume-name.vo';
 import {
@@ -11,6 +9,8 @@ import {
 } from '@/modules/shared/application/app-error';
 import { UseCase } from '@/modules/shared/application/use-case.interface';
 import { Result } from '@/modules/shared/domain';
+import { IResumeSnapshotRepository } from '@/modules/resume/application/repositories/resume-snapshot.repository.interface';
+import { IResumeQueryRepository } from '@/modules/resume/application/repositories/resume.query.repository.interface';
 
 type UpdateResumeResponse = Result<
   UpdateResumeResponseDto,
@@ -18,7 +18,11 @@ type UpdateResumeResponse = Result<
 >;
 
 export class UpdateResumeUseCase implements UseCase<UpdateResumeRequestDto, UpdateResumeResponse> {
-  constructor(private readonly resumeRepository: IResumeRepository) {}
+  constructor(
+    private readonly resumeRepository: IResumeRepository,
+    private readonly resumeSnapshotRepository: IResumeSnapshotRepository,
+    private readonly resumeQueryRepository: IResumeQueryRepository
+  ) {}
 
   public async execute(request: UpdateResumeRequestDto): Promise<UpdateResumeResponse> {
     try {
@@ -50,7 +54,22 @@ export class UpdateResumeUseCase implements UseCase<UpdateResumeRequestDto, Upda
 
       await this.resumeRepository.save(resume);
 
-      return Result.ok(ResumeDtoMapper.toResponse(resume));
+      const snapshot = await this.resumeSnapshotRepository.createSnapshot(
+        request.userId,
+        request.resumeId
+      );
+
+      if (!snapshot) {
+        return Result.fail(new NotFoundError('Resume snapshot not found'));
+      }
+
+      const updated = await this.resumeQueryRepository.findById(request.resumeId, request.userId);
+
+      if (!updated) {
+        return Result.fail(new NotFoundError('Resume not found'));
+      }
+
+      return Result.ok(updated);
     } catch (err) {
       return Result.fail(new UnexpectedError(err));
     }

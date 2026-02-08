@@ -1,4 +1,4 @@
-import resumeTemplateService from '@/modules/resumeTemplate/resumeTemplate.service';
+import { listTemplates } from '@hirely/resume-templates';
 import {
   IResumeTemplateService,
   ResumeTemplateListItem,
@@ -6,6 +6,6 @@ import {
 
 export class ResumeTemplateService implements IResumeTemplateService {
   listTemplates(): ResumeTemplateListItem[] {
-    return resumeTemplateService.listTemplates();
+    return listTemplates();
   }
 }

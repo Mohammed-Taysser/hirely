@@ -1,9 +1,6 @@
-import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
 import { ITokenService, UserTokenPayload } from '../application/services/token.service.interface';
-
-import errorService from './error.service';
 
 import ennValidation from '@/apps/config';
 
@@ -19,14 +16,6 @@ class TokenService implements ITokenService {
     };
   }
 
-  async hash(password: string): Promise<string> {
-    return bcrypt.hash(password, 10);
-  }
-
-  async compare(password: string, hash: string): Promise<boolean> {
-    return bcrypt.compare(password, hash);
-  }
-
   signAccessToken(payload: UserTokenPayload): string {
     return jwt.sign(this.preparePayload(payload), this.SECRET, {
       expiresIn: this.ACCESS_EXPIRY,
@@ -40,22 +29,7 @@ class TokenService implements ITokenService {
   }
 
   verifyToken<T>(token: string): T {
-    try {
-      return jwt.verify(token, this.SECRET) as T;
-    } catch (error) {
-      // Convert all JWT errors to UnauthorizedError
-      if (error instanceof jwt.TokenExpiredError) {
-        throw errorService.unauthorized('Token has expired');
-      }
-      if (error instanceof jwt.JsonWebTokenError) {
-        throw errorService.unauthorized('Invalid token');
-      }
-      if (error instanceof jwt.NotBeforeError) {
-        throw errorService.unauthorized('Token not yet valid');
-      }
-      // Re-throw any other unexpected errors
-      throw error;
-    }
+    return jwt.verify(token, this.SECRET) as T;
   }
 }
 

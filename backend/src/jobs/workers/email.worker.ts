@@ -1,16 +1,13 @@
-import { fileURLToPath } from 'url';
-
 import { Worker } from 'bullmq';
 
-import prisma from '@/apps/prisma';
 import { redisConnectionOptions } from '@/apps/redis';
-import { mailerPromise } from '@/infra/mail/mailer';
-import { LocalStorageAdapter } from '@/infra/storage/local.adapter';
-import { activityService } from '@/modules/activity/activity.service';
+import { SendExportEmailUseCase } from '@/modules/export/application/use-cases/send-export-email/send-export-email.use-case';
+import { ExportEmailService } from '@/modules/export/infrastructure/services/export-email.service';
 import { QUEUE_NAMES } from '@/shared/constants';
 import { logger } from '@/shared/logger';
 
-const storage = new LocalStorageAdapter();
+const exportEmailService = new ExportEmailService();
+const sendExportEmailUseCase = new SendExportEmailUseCase(exportEmailService);
 
 export const startEmailWorker = () => {
   return new Worker(
@@ -24,53 +21,19 @@ export const startEmailWorker = () => {
         recipient?: { name?: string; company?: string; message?: string };
         reason: 'free-tier-export' | 'bulk-apply';
       };
-
-      const exportRecord = await prisma.resumeExport.findFirst({
-        where: { id: exportId, userId },
-        include: { user: true },
-      });
-
-      if (!exportRecord || !exportRecord.url) {
-        throw new Error('Export not ready');
-      }
-
-      if (exportRecord.status !== 'READY') {
-        throw new Error('Export not ready');
-      }
-
-      const downloadUrl = await storage.getSignedDownloadUrl(exportRecord.url, 60 * 60);
-      const isLocalFile = downloadUrl.startsWith('file://');
-      const attachmentPath = isLocalFile ? fileURLToPath(downloadUrl) : null;
-
-      const subject = reason === 'bulk-apply' ? 'Resume Application' : 'Your resume export';
-      const greeting = recipient?.name ? `Hi ${recipient.name},` : 'Hello,';
-      const companyLine = recipient?.company ? `Role at ${recipient.company}` : '';
-      const message = recipient?.message ? `\n${recipient.message}` : '';
-
-      const linkLine = isLocalFile ? '' : `\n${downloadUrl}`;
-      const body = `${greeting}
-
-Please find the resume ${isLocalFile ? 'attached' : 'at the secure link below.'}${linkLine}
-${companyLine}${message}
-
-Best regards,
-${exportRecord.user.email}`;
-
-      const mailer = await mailerPromise;
-
-      await mailer.sendMail({
-        from: process.env.MAIL_FROM || 'no-reply@hirely.app',
-        to,
-        subject,
-        text: body,
-        attachments: attachmentPath ? [{ path: attachmentPath }] : undefined,
-      });
-
-      await activityService.log(userId, 'resume.sent.email', {
+      const result = await sendExportEmailUseCase.execute({
         exportId,
+        userId,
         to,
+        recipient,
         reason,
       });
+
+      if (result.isFailure) {
+        const error = result.error ?? new Error('Email job failed');
+        logger.error('Email job failed', { exportId, error });
+        throw new Error(error.message);
+      }
     },
     {
       connection: redisConnectionOptions,

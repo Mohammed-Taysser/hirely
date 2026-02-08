@@ -1,4 +1,5 @@
-import { exportService } from '@/modules/export/export.service';
+import { ExportService } from '@/modules/export/infrastructure/services/export.service';
+import { IExportService } from '@/modules/export/application/services/export.service.interface';
 import {
   IResumeExportService,
   ResumeExportResult,
@@ -6,8 +7,10 @@ import {
 } from '@/modules/resume/application/services/resume-export.service.interface';
 
 export class ResumeExportService implements IResumeExportService {
+  constructor(private readonly exportService: IExportService = new ExportService()) {}
+
   async generatePdfBuffer(userId: string, resumeId: string): Promise<ResumeExportResult> {
-    return exportService.generatePdfBuffer(userId, resumeId);
+    return this.exportService.generatePdfBuffer(userId, resumeId);
   }
 
   async getExportStatusForResume(
@@ -15,6 +18,6 @@ export class ResumeExportService implements IResumeExportService {
     resumeId: string,
     exportId: string
   ): Promise<ResumeExportStatusResult> {
-    return exportService.getExportStatusForResume(userId, resumeId, exportId);
+    return this.exportService.getExportStatusForResume(userId, resumeId, exportId);
   }
 }

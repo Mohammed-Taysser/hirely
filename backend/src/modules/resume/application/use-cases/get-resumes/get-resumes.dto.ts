@@ -1,11 +1,12 @@
-import { Prisma } from '@generated-prisma';
-
-import { ResumeFullDto } from '../../repositories/resume.query.repository.interface';
+import {
+  ResumeFullDto,
+  ResumeQueryFilters,
+} from '../../repositories/resume.query.repository.interface';
 
 export interface GetResumesRequestDto {
   page: number;
   limit: number;
-  filters: Prisma.ResumeWhereInput;
+  filters: ResumeQueryFilters;
 }
 
 export interface GetResumesResponseDto {

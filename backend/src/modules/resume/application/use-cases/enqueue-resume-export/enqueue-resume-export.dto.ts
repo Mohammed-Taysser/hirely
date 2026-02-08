@@ -1,7 +1,7 @@
-import type { User } from '@generated-prisma';
+import type { AuthenticatedUser } from '@/modules/shared/application/authenticated-user';
 
 export interface EnqueueResumeExportRequestDto {
-  user: User;
+  user: AuthenticatedUser;
   resumeId: string;
 }
 

@@ -1,43 +1,36 @@
-# Step 8: Application Layer - Resume Snapshots & Exports
+# Step 8: Application Layer - Resume Exports
 
 **Status:** ✅ Completed
 **Date:** February 3, 2026
 
 ## Objective
 
-Move snapshot creation and PDF export generation into the Application layer, and add read/queue flows for resume exports.
+Move PDF export generation into the Application layer, and add read/queue flows for resume exports. Snapshot creation is embedded in relevant use cases (e.g., update/export flows).
 
 ## 🏗️ Core Components Implemented
 
-### 1. `CreateResumeSnapshotUseCase`
-
-- **Path:** `backend/src/modules/resume/application/use-cases/create-resume-snapshot/`
-- **Input:** `CreateResumeSnapshotRequestDto` (`userId`, `resumeId`)
-- **Output:** Snapshot DTO (`id`, `resumeId`, `userId`, `data`, `createdAt`)
-- **Behavior:** Creates a snapshot for the current resume data or returns `NotFoundError`.
-
-### 2. `ExportResumeUseCase`
+### 1. `ExportResumeUseCase`
 
 - **Path:** `backend/src/modules/resume/application/use-cases/export-resume/`
 - **Input:** `ExportResumeRequestDto` (`userId`, `resumeId`)
 - **Output:** `ResumeExportResult` (`pdfBuffer`)
 - **Behavior:** Generates a PDF buffer via the export service abstraction.
 
-### 3. `GetResumeExportsUseCase`
+### 2. `GetResumeExportsUseCase`
 
 - **Path:** `backend/src/modules/resume/application/use-cases/get-resume-exports/`
 - **Input:** `GetResumeExportsRequestDto` (`page`, `limit`, `filters`)
 - **Output:** `{ exports, total }`
 - **Behavior:** Returns paginated export records via a query repository.
 
-### 4. `GetResumeExportStatusUseCase`
+### 3. `GetResumeExportStatusUseCase`
 
 - **Path:** `backend/src/modules/resume/application/use-cases/get-resume-export-status/`
 - **Input:** `GetResumeExportStatusRequestDto` (`userId`, `resumeId`, `exportId`)
 - **Output:** Export status payload (`status`, `expiresAt`, `downloadUrl`)
 - **Behavior:** Queries export status through the export service abstraction.
 
-### 5. `EnqueueResumeExportUseCase`
+### 4. `EnqueueResumeExportUseCase`
 
 - **Path:** `backend/src/modules/resume/application/use-cases/enqueue-resume-export/`
 - **Input:** `EnqueueResumeExportRequestDto` (`user`, `resumeId`)
@@ -55,9 +48,6 @@ backend/src/modules/resume/
 │   ├── services/
 │   │   └── resume-export.service.interface.ts
 │   └── use-cases/
-│       ├── create-resume-snapshot/
-│       │   ├── create-resume-snapshot.dto.ts
-│       │   └── create-resume-snapshot.use-case.ts
 │       └── export-resume/
 │           ├── export-resume.dto.ts
 │           └── export-resume.use-case.ts

@@ -1,27 +1,21 @@
 import { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 
-import { GetPlansUseCase } from '@/modules/plan/application/use-cases/get-plans/get-plans.use-case';
-import { GetPlanByIdUseCase } from '@/modules/plan/application/use-cases/get-plan-by-id/get-plan-by-id.use-case';
-import { CreatePlanUseCase } from '@/modules/plan/application/use-cases/create-plan/create-plan.use-case';
-import { UpdatePlanUseCase } from '@/modules/plan/application/use-cases/update-plan/update-plan.use-case';
-import { DeletePlanUseCase } from '@/modules/plan/application/use-cases/delete-plan/delete-plan.use-case';
-import { PrismaPlanQueryRepository } from '@/modules/plan/infrastructure/persistence/prisma-plan.query.repository';
-import { PrismaPlanCommandRepository } from '@/modules/plan/infrastructure/persistence/prisma-plan.command.repository';
-import { mapAppErrorToHttp } from '@/modules/shared/application/app-error.mapper';
+import { mapAppErrorToHttp } from '@/modules/shared/presentation/app-error.mapper';
 import { getPlansFilter } from './plan.utils';
 import type { PlanDTO } from './plan.dto';
+import { planContainer } from '@/apps/container';
 
 import responseService from '@/modules/shared/services/response.service';
 import { TypedAuthenticatedRequest } from '@/modules/shared/types/import';
 
-const planQueryRepository = new PrismaPlanQueryRepository();
-const planCommandRepository = new PrismaPlanCommandRepository();
-const getPlansUseCase = new GetPlansUseCase(planQueryRepository);
-const getPlanByIdUseCase = new GetPlanByIdUseCase(planQueryRepository);
-const createPlanUseCase = new CreatePlanUseCase(planCommandRepository, planQueryRepository);
-const updatePlanUseCase = new UpdatePlanUseCase(planCommandRepository, planQueryRepository);
-const deletePlanUseCase = new DeletePlanUseCase(planCommandRepository, planQueryRepository);
+const {
+  getPlansUseCase,
+  getPlanByIdUseCase,
+  createPlanUseCase,
+  updatePlanUseCase,
+  deletePlanUseCase,
+} = planContainer;
 
 async function getPlans(req: Request, response: Response) {
   const request = req as TypedAuthenticatedRequest<PlanDTO['getPlans']>;
@@ -111,15 +105,15 @@ async function updatePlan(req: Request, response: Response) {
       code: body.code,
       name: body.name,
       description: body.description,
-    limits: body.limits
-      ? {
-          update: {
-            maxResumes: body.limits.maxResumes,
-            maxExports: body.limits.maxExports,
-            dailyUploadMb: body.limits.dailyUploadMb,
-          },
-        }
-      : undefined,
+      limits: body.limits
+        ? {
+            update: {
+              maxResumes: body.limits.maxResumes,
+              maxExports: body.limits.maxExports,
+              dailyUploadMb: body.limits.dailyUploadMb,
+            },
+          }
+        : undefined,
     },
   });
 

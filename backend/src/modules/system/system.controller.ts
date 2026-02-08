@@ -1,12 +1,10 @@
 import { Request, Response } from 'express';
 
 import responseService from '@/modules/shared/services/response.service';
-import { GetHealthCheckUseCase } from '@/modules/system/application/use-cases/get-health-check/get-health-check.use-case';
-import { OsSystemHealthService } from '@/modules/system/infrastructure/services/os-system-health.service';
-import { mapAppErrorToHttp } from '@/modules/shared/application/app-error.mapper';
+import { mapAppErrorToHttp } from '@/modules/shared/presentation/app-error.mapper';
+import { systemContainer } from '@/apps/container';
 
-const systemHealthService = new OsSystemHealthService();
-const getHealthCheckUseCase = new GetHealthCheckUseCase(systemHealthService);
+const { getHealthCheckUseCase } = systemContainer;
 
 async function getHealthCheck(request: Request, response: Response) {
   const result = await getHealthCheckUseCase.execute();

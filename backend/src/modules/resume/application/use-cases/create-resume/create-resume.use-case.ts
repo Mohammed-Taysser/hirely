@@ -4,10 +4,18 @@ import { IResumeRepository } from '../../../domain/repositories/resume.repositor
 import { Resume } from '../../../domain/resume.aggregate';
 import { ResumeName } from '../../../domain/value-objects/resume-name.vo';
 
-import { ForbiddenError, UnexpectedError, ValidationError } from '@/modules/shared/application/app-error';
+import {
+  ForbiddenError,
+  UnexpectedError,
+  ValidationError,
+} from '@/modules/shared/application/app-error';
 import { IPlanLimitQueryRepository } from '@/modules/plan/application/repositories/plan-limit.query.repository.interface';
 import { UseCase } from '@/modules/shared/application/use-case.interface';
 import { Result } from '@/modules/shared/domain';
+import {
+  IResumeQueryRepository,
+  ResumeFullDto,
+} from '@/modules/resume/application/repositories/resume.query.repository.interface';
 
 export interface CreateResumeRequestDto {
   userId: string;
@@ -19,12 +27,16 @@ export interface CreateResumeRequestDto {
   data: ResumeData;
 }
 
-export type CreateResumeResponse = Result<Resume, ValidationError | ForbiddenError | UnexpectedError>;
+export type CreateResumeResponse = Result<
+  ResumeFullDto,
+  ValidationError | ForbiddenError | UnexpectedError
+>;
 
 export class CreateResumeUseCase implements UseCase<CreateResumeRequestDto, CreateResumeResponse> {
   constructor(
     private readonly resumeRepository: IResumeRepository,
-    private readonly planLimitQueryRepository: IPlanLimitQueryRepository
+    private readonly planLimitQueryRepository: IPlanLimitQueryRepository,
+    private readonly resumeQueryRepository: IResumeQueryRepository
   ) {}
 
   public async execute(request: CreateResumeRequestDto): Promise<CreateResumeResponse> {
@@ -66,7 +78,12 @@ export class CreateResumeUseCase implements UseCase<CreateResumeRequestDto, Crea
 
       await this.resumeRepository.save(resume);
 
-      return Result.ok(resume);
+      const created = await this.resumeQueryRepository.findById(resume.id, request.userId);
+      if (!created) {
+        return Result.fail(new UnexpectedError(new Error('Created resume not found')));
+      }
+
+      return Result.ok(created);
     } catch (err) {
       return Result.fail(new UnexpectedError(err));
     }

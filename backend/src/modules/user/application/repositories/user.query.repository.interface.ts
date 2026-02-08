@@ -1,16 +1,43 @@
-import { Prisma } from '@generated-prisma';
+import { DateRangeInput } from '@/modules/shared/dto/filters.dto';
 
-import userSelect from '@/modules/shared/prisma-select/user.select';
+export interface UserPlanDto {
+  id: string;
+  code: string;
+  name: string;
+}
 
-export type UserBasicDto = Prisma.UserGetPayload<{ select: typeof userSelect.basic }>;
-export type UserFullDto = Prisma.UserGetPayload<{ select: typeof userSelect.full }>;
+export interface UserBasicDto {
+  id: string;
+  name: string;
+}
+
+export interface UserFullDto extends UserBasicDto {
+  createdAt: Date;
+  updatedAt: Date;
+  email: string;
+  planId: string;
+  plan?: UserPlanDto | null;
+  isVerified: boolean;
+  isDeleted: boolean;
+  verificationToken: string | null;
+  verificationTokenExpiresAt: Date | null;
+  resetToken: string | null;
+  resetTokenExpiresAt: Date | null;
+  resumes?: Array<Record<string, unknown>>;
+}
+
+export interface UserQueryFilters {
+  name?: string;
+  email?: string;
+  createdAt?: DateRangeInput;
+}
 
 export interface IUserQueryRepository {
   getPaginatedUsers(
     page: number,
     limit: number,
-    filters: Prisma.UserWhereInput
+    filters: UserQueryFilters
   ): Promise<[UserFullDto[], number]>;
-  getBasicUsers(filters: Prisma.UserWhereInput): Promise<UserBasicDto[]>;
+  getBasicUsers(filters: UserQueryFilters): Promise<UserBasicDto[]>;
   findById(id: string): Promise<UserFullDto | null>;
 }

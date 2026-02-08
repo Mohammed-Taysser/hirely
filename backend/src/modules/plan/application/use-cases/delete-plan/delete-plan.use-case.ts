@@ -4,7 +4,10 @@ import { NotFoundError, UnexpectedError } from '@/modules/shared/application/app
 import { UseCase } from '@/modules/shared/application/use-case.interface';
 import { Result } from '@/modules/shared/domain';
 import { IPlanCommandRepository } from '@/modules/plan/application/repositories/plan.command.repository.interface';
-import { IPlanQueryRepository, PlanDto } from '@/modules/plan/application/repositories/plan.query.repository.interface';
+import {
+  IPlanQueryRepository,
+  PlanDto,
+} from '@/modules/plan/application/repositories/plan.query.repository.interface';
 
 type DeletePlanResponse = Result<PlanDto, NotFoundError | UnexpectedError>;
 

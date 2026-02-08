@@ -7,6 +7,7 @@ import { UseCase } from '@/modules/shared/application/use-case.interface';
 import { Result } from '@/modules/shared/domain';
 import { IUserRepository } from '@/modules/user/domain/repositories/user.repository.interface';
 import { UserEmail } from '@/modules/user/domain/value-objects/user-email.vo';
+import { IUserQueryRepository } from '@/modules/user/application/repositories/user.query.repository.interface';
 
 type LoginResponse = Result<LoginResponseDto, ValidationError | UnexpectedError>;
 
@@ -14,7 +15,8 @@ export class LoginUseCase implements UseCase<LoginRequestDto, LoginResponse> {
   constructor(
     private readonly userRepository: IUserRepository,
     private readonly tokenService: ITokenService,
-    private readonly passwordHasher: IPasswordHasher
+    private readonly passwordHasher: IPasswordHasher,
+    private readonly userQueryRepository: IUserQueryRepository
   ) {}
 
   public async execute(request: LoginRequestDto): Promise<LoginResponse> {
@@ -46,13 +48,13 @@ export class LoginUseCase implements UseCase<LoginRequestDto, LoginResponse> {
       const accessToken = this.tokenService.signAccessToken(payload);
       const refreshToken = this.tokenService.signRefreshToken(payload);
 
+      const fullUser = await this.userQueryRepository.findById(user.id);
+      if (!fullUser) {
+        return Result.fail(new UnexpectedError(new Error('User not found')));
+      }
+
       return Result.ok({
-        user: {
-          id: user.id,
-          name: user.name.value,
-          email: user.email.value,
-          planId: user.planId,
-        },
+        user: fullUser,
         accessToken,
         refreshToken,
       });

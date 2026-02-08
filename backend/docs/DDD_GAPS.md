@@ -20,7 +20,7 @@ Before proceeding, we have identified several missing components required to ful
 
 ## 3. Resume Module
 
-**Current Status:** `CreateResumeUseCase`, `UpdateResumeUseCase`, `DeleteResumeUseCase`, `CreateResumeSnapshotUseCase`, `ExportResumeUseCase`, `GetResumeExportsUseCase`, `GetResumeExportStatusUseCase`, and `EnqueueResumeExportUseCase` are implemented.
+**Current Status:** `CreateResumeUseCase`, `UpdateResumeUseCase`, `DeleteResumeUseCase`, `ExportResumeUseCase`, `GetResumeExportsUseCase`, `GetResumeExportStatusUseCase`, and `EnqueueResumeExportUseCase` are implemented.
 **Missing:**
 
 - **Query Use Cases for Lists**:
@@ -69,6 +69,6 @@ To complete the migration for the **User & Resume** modules, we should prioritiz
 
 1.  **Auth**: Ensure any remaining auth endpoints use the new use cases consistently.
 2.  **User**: Finish migrating remaining list endpoints to query use cases.
-3.  **Resume**: `CreateResumeSnapshotUseCase` and `ExportResumeUseCase`.
+3.  **Resume**: `ExportResumeUseCase`.
 
 This would cover the core CRUD lifecycle before tackling more advanced features like Snapshots or Exports.

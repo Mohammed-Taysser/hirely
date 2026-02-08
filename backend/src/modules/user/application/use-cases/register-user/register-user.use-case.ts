@@ -8,12 +8,19 @@ import { UserDto } from '../../user.dto';
 
 import { RegisterUserRequestDto } from './register-user.dto';
 
-import { ConflictError, UnexpectedError, ValidationError } from '@/modules/shared/application/app-error';
+import {
+  ConflictError,
+  UnexpectedError,
+  ValidationError,
+} from '@/modules/shared/application/app-error';
 import { IPasswordHasher } from '@/modules/shared/application/services/password-hasher.service.interface';
 import { UseCase } from '@/modules/shared/application/use-case.interface';
 import { Result } from '@/modules/shared/domain';
 
-export type RegisterUserResponse = Result<UserDto, ValidationError | ConflictError | UnexpectedError>;
+export type RegisterUserResponse = Result<
+  UserDto,
+  ValidationError | ConflictError | UnexpectedError
+>;
 
 export class RegisterUserUseCase implements UseCase<RegisterUserRequestDto, RegisterUserResponse> {
   constructor(

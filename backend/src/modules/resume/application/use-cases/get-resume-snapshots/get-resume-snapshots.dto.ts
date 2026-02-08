@@ -1,11 +1,12 @@
-import { Prisma } from '@generated-prisma';
-
-import { ResumeSnapshotDto } from '../../repositories/resume.query.repository.interface';
+import {
+  ResumeSnapshotDto,
+  ResumeSnapshotsQueryFilters,
+} from '../../repositories/resume.query.repository.interface';
 
 export interface GetResumeSnapshotsRequestDto {
   page: number;
   limit: number;
-  filters: Prisma.ResumeSnapshotWhereInput;
+  filters: ResumeSnapshotsQueryFilters;
 }
 
 export interface GetResumeSnapshotsResponseDto {

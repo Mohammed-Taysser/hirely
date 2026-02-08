@@ -1,2 +1,1 @@
-export const canDirectDownload = (planCode: string) =>
-  planCode === "PRO" || planCode === "PLUS";
+export const canDirectDownload = (planCode: string) => planCode === 'PRO' || planCode === 'PLUS';

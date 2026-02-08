@@ -1,11 +1,9 @@
-import { Prisma } from '@generated-prisma';
-
-import { UserFullDto } from '../../repositories/user.query.repository.interface';
+import { UserFullDto, UserQueryFilters } from '../../repositories/user.query.repository.interface';
 
 export interface GetUsersRequestDto {
   page: number;
   limit: number;
-  filters: Prisma.UserWhereInput;
+  filters: UserQueryFilters;
 }
 
 export interface GetUsersResponseDto {

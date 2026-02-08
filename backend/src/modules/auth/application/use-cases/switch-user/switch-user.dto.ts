@@ -1,14 +1,11 @@
+import { UserFullDto } from '@/modules/user/application/repositories/user.query.repository.interface';
+
 export interface SwitchUserRequestDto {
   userId: string;
 }
 
 export interface SwitchUserResponseDto {
-  user: {
-    id: string;
-    name: string;
-    email: string;
-    planId: string;
-  };
+  user: UserFullDto;
   accessToken: string;
   refreshToken: string;
 }

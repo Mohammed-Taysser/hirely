@@ -1,6 +1,6 @@
 import { ExportResumeRequestDto } from './export-resume.dto';
 
-import { NotFoundError, UnexpectedError } from '@/modules/shared/application/app-error';
+import { AppError, UnexpectedError } from '@/modules/shared/application/app-error';
 import { UseCase } from '@/modules/shared/application/use-case.interface';
 import { Result } from '@/modules/shared/domain';
 import {
@@ -8,7 +8,7 @@ import {
   ResumeExportResult,
 } from '@/modules/resume/application/services/resume-export.service.interface';
 
-type ExportResumeResponse = Result<ResumeExportResult, NotFoundError | UnexpectedError>;
+type ExportResumeResponse = Result<ResumeExportResult, AppError>;
 
 export class ExportResumeUseCase implements UseCase<ExportResumeRequestDto, ExportResumeResponse> {
   constructor(private readonly resumeExportService: IResumeExportService) {}
@@ -22,8 +22,8 @@ export class ExportResumeUseCase implements UseCase<ExportResumeRequestDto, Expo
 
       return Result.ok(result);
     } catch (err) {
-      if (err instanceof Error && err.message.includes('Resume not found')) {
-        return Result.fail(new NotFoundError('Resume not found'));
+      if (err instanceof AppError) {
+        return Result.fail(err);
       }
 
       return Result.fail(new UnexpectedError(err));

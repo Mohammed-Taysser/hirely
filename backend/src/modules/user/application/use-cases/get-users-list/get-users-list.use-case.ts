@@ -7,9 +7,7 @@ import { IUserQueryRepository } from '@/modules/user/application/repositories/us
 
 type GetUsersListResponse = Result<GetUsersListResponseDto, UnexpectedError>;
 
-export class GetUsersListUseCase
-  implements UseCase<GetUsersListRequestDto, GetUsersListResponse>
-{
+export class GetUsersListUseCase implements UseCase<GetUsersListRequestDto, GetUsersListResponse> {
   constructor(private readonly userQueryRepository: IUserQueryRepository) {}
 
   public async execute(request: GetUsersListRequestDto): Promise<GetUsersListResponse> {

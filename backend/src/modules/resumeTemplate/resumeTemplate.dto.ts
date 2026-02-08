@@ -13,4 +13,3 @@ export type ResumeTemplateDTO = {
 };
 
 export default resumeTemplateDTO;
-

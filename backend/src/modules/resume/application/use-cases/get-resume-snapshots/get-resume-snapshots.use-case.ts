@@ -1,4 +1,7 @@
-import { GetResumeSnapshotsRequestDto, GetResumeSnapshotsResponseDto } from './get-resume-snapshots.dto';
+import {
+  GetResumeSnapshotsRequestDto,
+  GetResumeSnapshotsResponseDto,
+} from './get-resume-snapshots.dto';
 
 import { UnexpectedError } from '@/modules/shared/application/app-error';
 import { UseCase } from '@/modules/shared/application/use-case.interface';
@@ -7,14 +10,13 @@ import { IResumeQueryRepository } from '@/modules/resume/application/repositorie
 
 type GetResumeSnapshotsResponse = Result<GetResumeSnapshotsResponseDto, UnexpectedError>;
 
-export class GetResumeSnapshotsUseCase
-  implements UseCase<GetResumeSnapshotsRequestDto, GetResumeSnapshotsResponse>
-{
+export class GetResumeSnapshotsUseCase implements UseCase<
+  GetResumeSnapshotsRequestDto,
+  GetResumeSnapshotsResponse
+> {
   constructor(private readonly resumeQueryRepository: IResumeQueryRepository) {}
 
-  public async execute(
-    request: GetResumeSnapshotsRequestDto
-  ): Promise<GetResumeSnapshotsResponse> {
+  public async execute(request: GetResumeSnapshotsRequestDto): Promise<GetResumeSnapshotsResponse> {
     try {
       const [snapshots, total] = await this.resumeQueryRepository.getPaginatedSnapshots(
         request.page,

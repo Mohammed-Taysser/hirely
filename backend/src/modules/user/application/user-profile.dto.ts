@@ -1,0 +1,7 @@
+export interface UserProfileDto {
+  id: string;
+  name: string;
+  email: string;
+  planId: string;
+  isVerified: boolean;
+}

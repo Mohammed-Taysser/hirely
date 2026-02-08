@@ -7,31 +7,18 @@ import { getUsersFilter } from './user.utils';
 import errorService from '@/modules/shared/services/error.service';
 import responseService from '@/modules/shared/services/response.service';
 import { TypedAuthenticatedRequest } from '@/modules/shared/types/import';
-import { GetUsersUseCase } from '@/modules/user/application/use-cases/get-users/get-users.use-case';
-import { GetUsersListUseCase } from '@/modules/user/application/use-cases/get-users-list/get-users-list.use-case';
-import { FindUserByIdUseCase } from '@/modules/user/application/use-cases/find-user-by-id/find-user-by-id.use-case';
-import { UpdateUserUseCase } from '@/modules/user/application/use-cases/update-user/update-user.use-case';
-import { DeleteUserUseCase } from '@/modules/user/application/use-cases/delete-user/delete-user.use-case';
-import { RegisterUserUseCase } from '@/modules/user/application/use-cases/register-user/register-user.use-case';
-import { PrismaUserRepository } from '@/modules/user/infrastructure/persistence/prisma-user.repository';
-import { PrismaUserQueryRepository } from '@/modules/user/infrastructure/persistence/prisma-user.query.repository';
-import { GetPlanByCodeUseCase } from '@/modules/plan/application/use-cases/get-plan-by-code/get-plan-by-code.use-case';
-import { PrismaPlanQueryRepository } from '@/modules/plan/infrastructure/persistence/prisma-plan.query.repository';
-import { GetUserByIdQueryUseCase } from '@/modules/user/application/use-cases/get-user-by-id-query/get-user-by-id-query.use-case';
-import { mapAppErrorToHttp } from '@/modules/shared/application/app-error.mapper';
-import passwordHasherService from '@/modules/shared/services/password-hasher.service';
+import { mapAppErrorToHttp } from '@/modules/shared/presentation/app-error.mapper';
+import { userContainer } from '@/apps/container';
+import { UserProfileDto } from '@/modules/user/application/user-profile.dto';
 
-const userRepository = new PrismaUserRepository();
-const userQueryRepository = new PrismaUserQueryRepository();
-const planQueryRepository = new PrismaPlanQueryRepository();
-const getPlanByCodeUseCase = new GetPlanByCodeUseCase(planQueryRepository);
-const getUsersUseCase = new GetUsersUseCase(userQueryRepository);
-const getUsersListUseCase = new GetUsersListUseCase(userQueryRepository);
-const findUserByIdUseCase = new FindUserByIdUseCase(userRepository);
-const updateUserUseCase = new UpdateUserUseCase(userRepository);
-const deleteUserUseCase = new DeleteUserUseCase(userRepository);
-const registerUserUseCase = new RegisterUserUseCase(userRepository, passwordHasherService);
-const getUserByIdQueryUseCase = new GetUserByIdQueryUseCase(userQueryRepository);
+const {
+  getUsersUseCase,
+  getUsersListUseCase,
+  updateUserUseCase,
+  deleteUserUseCase,
+  getUserByIdQueryUseCase,
+  createUserWithPlanUseCase,
+} = userContainer;
 
 async function getUsers(req: Request, response: Response) {
   const request = req as TypedAuthenticatedRequest<UserDTO['getUsersList']>;
@@ -84,8 +71,13 @@ async function getUsersList(req: Request, response: Response) {
 async function getProfile(req: Request, response: Response) {
   const request = req as TypedAuthenticatedRequest;
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { password, ...user } = request.user;
+  const user: UserProfileDto = {
+    id: request.user.id,
+    name: request.user.name,
+    email: request.user.email,
+    planId: request.user.planId,
+    isVerified: Boolean(request.user.isVerified),
+  };
 
   responseService.success(response, {
     message: 'User fetched successfully',
@@ -98,13 +90,7 @@ async function getUserById(req: Request, response: Response) {
 
   const { params } = request;
 
-  const result = await findUserByIdUseCase.execute({ userId: params.userId });
-
-  if (result.isFailure) {
-    throw mapAppErrorToHttp(result.error);
-  }
-
-  const userResult = await getUserByIdQueryUseCase.execute({ userId: result.getValue().id });
+  const userResult = await getUserByIdQueryUseCase.execute({ userId: params.userId });
 
   if (userResult.isFailure) {
     throw mapAppErrorToHttp(userResult.error);
@@ -123,36 +109,19 @@ async function createUser(req: Request, response: Response) {
 
   const body = request.parsedBody;
 
-  const planResult = await getPlanByCodeUseCase.execute({ code: 'FREE' });
-
-  if (planResult.isFailure) {
-    throw mapAppErrorToHttp(planResult.error);
-  }
-
-  const plan = planResult.getValue();
-
-  const result = await registerUserUseCase.execute({
+  const result = await createUserWithPlanUseCase.execute({
     email: body.email,
     name: body.name,
     password: body.password,
-    planId: plan.id,
   });
 
   if (result.isFailure) {
     throw mapAppErrorToHttp(result.error);
   }
 
-  const newUserResult = await getUserByIdQueryUseCase.execute({ userId: result.getValue().id });
-
-  if (newUserResult.isFailure) {
-    throw mapAppErrorToHttp(newUserResult.error);
-  }
-
-  const newUser = newUserResult.getValue();
-
   responseService.success(response, {
     message: 'User created successfully',
-    data: newUser,
+    data: result.getValue(),
     statusCode: StatusCodes.CREATED,
   });
 }
@@ -176,13 +145,7 @@ async function updateUser(req: Request, response: Response) {
     throw mapAppErrorToHttp(result.error);
   }
 
-  const updatedUserResult = await getUserByIdQueryUseCase.execute({ userId: result.getValue().id });
-
-  if (updatedUserResult.isFailure) {
-    throw mapAppErrorToHttp(updatedUserResult.error);
-  }
-
-  const updatedUser = updatedUserResult.getValue();
+  const updatedUser = result.getValue();
 
   responseService.success(response, {
     message: 'User updated successfully',
@@ -199,21 +162,13 @@ async function deleteUser(req: Request, response: Response) {
     throw errorService.forbidden('You do not have permission to delete this user');
   }
 
-  const existingUserResult = await getUserByIdQueryUseCase.execute({ userId: params.userId });
-
-  if (existingUserResult.isFailure) {
-    throw mapAppErrorToHttp(existingUserResult.error);
-  }
-
-  const existingUser = existingUserResult.getValue();
-
   const result = await deleteUserUseCase.execute({ userId: params.userId });
 
   if (result.isFailure) {
     throw mapAppErrorToHttp(result.error);
   }
 
-  const deletedUser = existingUser;
+  const deletedUser = result.getValue();
 
   responseService.success(response, {
     message: 'User deleted successfully',

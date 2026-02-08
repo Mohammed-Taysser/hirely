@@ -1,4 +1,5 @@
 import { Prisma } from '@generated-prisma';
+import { ResumeData } from '@hirely/resume-core';
 
 import prisma from '@/apps/prisma';
 import {
@@ -17,7 +18,7 @@ export class PrismaResumeSnapshotRepository implements IResumeSnapshotRepository
       return null;
     }
 
-    return prisma.resumeSnapshot.create({
+    const snapshot = await prisma.resumeSnapshot.create({
       data: {
         userId,
         resumeId,
@@ -31,5 +32,10 @@ export class PrismaResumeSnapshotRepository implements IResumeSnapshotRepository
         createdAt: true,
       },
     });
+
+    return {
+      ...snapshot,
+      data: snapshot.data as ResumeData,
+    };
   }
 }

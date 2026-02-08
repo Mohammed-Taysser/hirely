@@ -1,4 +1,5 @@
-import { ExportStatus, Prisma } from '@generated-prisma';
+import { DateRangeInput } from '@/modules/shared/dto/filters.dto';
+import { ExportStatus } from '@/modules/export/application/export-status';
 
 export interface ResumeExportDto {
   id: string;
@@ -12,10 +13,17 @@ export interface ResumeExportDto {
   updatedAt: Date;
 }
 
+export interface ResumeExportQueryFilters {
+  userId: string;
+  resumeId: string;
+  status?: ExportStatus;
+  createdAt?: DateRangeInput;
+}
+
 export interface IResumeExportQueryRepository {
   getPaginatedExports(
     page: number,
     limit: number,
-    filters: Prisma.ResumeExportWhereInput
+    filters: ResumeExportQueryFilters
   ): Promise<[ResumeExportDto[], number]>;
 }

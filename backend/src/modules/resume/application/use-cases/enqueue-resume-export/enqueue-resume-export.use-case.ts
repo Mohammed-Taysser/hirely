@@ -1,32 +1,85 @@
-import { exportResumeCommand } from '@/commands/exportResume.command';
-import { AppError, NotFoundError, UnexpectedError } from '@/modules/shared/application/app-error';
-import { mapBaseErrorToAppError } from '@/modules/shared/application/app-error.mapper';
+import { canDirectDownload } from '@/modules/export/export.policy';
+import {
+  AppError,
+  NotFoundError,
+  TooManyRequestsError,
+  UnexpectedError,
+} from '@/modules/shared/application/app-error';
 import { UseCase } from '@/modules/shared/application/use-case.interface';
 import { Result } from '@/modules/shared/domain';
-import { BaseError } from '@/modules/shared/services/error.service';
 
 import {
   EnqueueResumeExportRequestDto,
   EnqueueResumeExportResponseDto,
 } from './enqueue-resume-export.dto';
+import { IExportService } from '@/modules/export/application/services/export.service.interface';
+import { IExportQueueService } from '@/modules/export/application/services/export-queue.service.interface';
+import { IResumeSnapshotRepository } from '@/modules/resume/application/repositories/resume-snapshot.repository.interface';
+import { IUserQueryRepository } from '@/modules/user/application/repositories/user.query.repository.interface';
+import { IRateLimiter } from '@/modules/shared/application/services/rate-limiter.service.interface';
 
 type EnqueueResumeExportResponse = Result<EnqueueResumeExportResponseDto, AppError>;
 
-export class EnqueueResumeExportUseCase
-  implements UseCase<EnqueueResumeExportRequestDto, EnqueueResumeExportResponse>
-{
+export class EnqueueResumeExportUseCase implements UseCase<
+  EnqueueResumeExportRequestDto,
+  EnqueueResumeExportResponse
+> {
+  constructor(
+    private readonly exportService: IExportService,
+    private readonly exportQueueService: IExportQueueService,
+    private readonly resumeSnapshotRepository: IResumeSnapshotRepository,
+    private readonly userQueryRepository: IUserQueryRepository,
+    private readonly rateLimiter: IRateLimiter
+  ) {}
+
   public async execute(
     request: EnqueueResumeExportRequestDto
   ): Promise<EnqueueResumeExportResponse> {
     try {
-      const result = await exportResumeCommand(request.user, request.resumeId);
-      return Result.ok(result);
-    } catch (err) {
-      if (err instanceof BaseError) {
-        return Result.fail(mapBaseErrorToAppError(err));
+      const allowed = await this.rateLimiter.consume({
+        key: `rate:export:${request.user.id}`,
+        max: 50,
+        windowSeconds: 120,
+      });
+
+      if (!allowed) {
+        return Result.fail(new TooManyRequestsError('Export rate limit exceeded'));
       }
-      if (err instanceof Error && err.message.includes('Resume not found')) {
+
+      const user = await this.userQueryRepository.findById(request.user.id);
+      if (!user?.planId || !user.plan?.code) {
+        return Result.fail(new NotFoundError('User plan not found'));
+      }
+
+      await this.exportService.enforceExportLimit(request.user.id, user.planId);
+
+      const snapshot = await this.resumeSnapshotRepository.createSnapshot(
+        request.user.id,
+        request.resumeId
+      );
+
+      if (!snapshot) {
         return Result.fail(new NotFoundError('Resume not found'));
+      }
+
+      const exportRecord = await this.exportService.createExportRecord(
+        request.user.id,
+        snapshot.id
+      );
+
+      await this.exportQueueService.enqueuePdf({
+        exportId: exportRecord.id,
+        snapshotId: snapshot.id,
+        userId: request.user.id,
+      });
+
+      return Result.ok({
+        exportId: exportRecord.id,
+        delivery: canDirectDownload(user.plan.code) ? 'download' : 'email',
+      });
+    } catch (err) {
+      if (err instanceof AppError) {
+        return Result.fail(err);
       }
       return Result.fail(new UnexpectedError(err));
     }

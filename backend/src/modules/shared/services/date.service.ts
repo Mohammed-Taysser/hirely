@@ -1,4 +1,3 @@
-import { Prisma } from '@generated-prisma';
 import dayjs, { ConfigType } from 'dayjs';
 import duration from 'dayjs/plugin/duration';
 import isBetween from 'dayjs/plugin/isBetween';
@@ -40,20 +39,20 @@ class DateService {
     return dayjs;
   }
 
-  /** Prisma-friendly date range filter */
+  /** Normalized date range filter */
   buildDateRangeFilter(dateRange?: DateRangeInput) {
     if (!dateRange || (!dateRange.startDate && !dateRange.endDate)) {
       return undefined;
     }
 
-    const filter: Pick<Prisma.DateTimeFilter, 'gte' | 'lte'> = {};
+    const filter: DateRangeInput = {};
 
     if (dateRange.startDate) {
-      filter.gte = dayjs(dateRange.startDate).startOf('day').toDate();
+      filter.startDate = dayjs(dateRange.startDate).startOf('day').toDate();
     }
 
     if (dateRange.endDate) {
-      filter.lte = dayjs(dateRange.endDate).endOf('day').toDate();
+      filter.endDate = dayjs(dateRange.endDate).endOf('day').toDate();
     }
 
     return filter;

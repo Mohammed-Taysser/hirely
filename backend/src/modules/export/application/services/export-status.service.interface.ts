@@ -1,6 +1,8 @@
+import { ExportStatus } from '@/modules/export/application/export-status';
+
 export interface ExportStatusResult {
   id: string;
-  status: string;
+  status: ExportStatus;
   error: string | null;
   expiresAt: Date | null;
   downloadUrl: string | null;

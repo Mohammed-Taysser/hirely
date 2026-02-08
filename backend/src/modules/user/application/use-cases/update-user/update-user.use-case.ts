@@ -1,7 +1,4 @@
-import { UserDtoMapper } from '../../mappers/user.dto.mapper';
-import { UserDto } from '../../user.dto';
-
-import { UpdateUserRequestDto } from './update-user.dto';
+import { UpdateUserRequestDto, UpdateUserResponseDto } from './update-user.dto';
 
 import {
   NotFoundError,
@@ -13,11 +10,18 @@ import { Result } from '@/modules/shared/domain';
 import { IUserRepository } from '@/modules/user/domain/repositories/user.repository.interface';
 import { UserEmail } from '@/modules/user/domain/value-objects/user-email.vo';
 import { UserName } from '@/modules/user/domain/value-objects/user-name.vo';
+import { IUserQueryRepository } from '@/modules/user/application/repositories/user.query.repository.interface';
 
-type UpdateUserResponse = Result<UserDto, ValidationError | UnexpectedError | NotFoundError>;
+type UpdateUserResponse = Result<
+  UpdateUserResponseDto,
+  ValidationError | UnexpectedError | NotFoundError
+>;
 
 export class UpdateUserUseCase implements UseCase<UpdateUserRequestDto, UpdateUserResponse> {
-  constructor(private readonly userRepository: IUserRepository) {}
+  constructor(
+    private readonly userRepository: IUserRepository,
+    private readonly userQueryRepository: IUserQueryRepository
+  ) {}
 
   public async execute(request: UpdateUserRequestDto): Promise<UpdateUserResponse> {
     try {
@@ -50,7 +54,12 @@ export class UpdateUserUseCase implements UseCase<UpdateUserRequestDto, UpdateUs
 
       await this.userRepository.save(user);
 
-      return Result.ok(UserDtoMapper.toResponse(user));
+      const updatedUser = await this.userQueryRepository.findById(user.id);
+      if (!updatedUser) {
+        return Result.fail(new NotFoundError('User not found'));
+      }
+
+      return Result.ok(updatedUser);
     } catch (err) {
       return Result.fail(new UnexpectedError(err));
     }

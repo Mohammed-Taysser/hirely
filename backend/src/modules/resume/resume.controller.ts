@@ -2,56 +2,28 @@ import { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 
 import type { ResumeDTO } from './resume.dto';
-import {
-  getResumeExportsFilter,
-  getResumesFilter,
-  getResumeSnapshotsFilter,
-  normalizeResumeData,
-} from './resume.utils';
+import { getResumeExportsFilter, getResumesFilter, getResumeSnapshotsFilter } from './resume.utils';
+import { normalizeResumeData } from '@/modules/resume/application/mappers/resume-data.normalizer';
 
 import errorService from '@/modules/shared/services/error.service';
 import responseService from '@/modules/shared/services/response.service';
 import { TypedAuthenticatedRequest } from '@/modules/shared/types/import';
-import { FindResumeByIdUseCase } from '@/modules/resume/application/use-cases/find-resume-by-id/find-resume-by-id.use-case';
-import { CreateResumeUseCase } from '@/modules/resume/application/use-cases/create-resume/create-resume.use-case';
-import { UpdateResumeUseCase } from '@/modules/resume/application/use-cases/update-resume/update-resume.use-case';
-import { DeleteResumeUseCase } from '@/modules/resume/application/use-cases/delete-resume/delete-resume.use-case';
-import { CreateResumeSnapshotUseCase } from '@/modules/resume/application/use-cases/create-resume-snapshot/create-resume-snapshot.use-case';
-import { ExportResumeUseCase } from '@/modules/resume/application/use-cases/export-resume/export-resume.use-case';
-import { GetResumeByIdQueryUseCase } from '@/modules/resume/application/use-cases/get-resume-by-id-query/get-resume-by-id-query.use-case';
-import { GetResumeExportsUseCase } from '@/modules/resume/application/use-cases/get-resume-exports/get-resume-exports.use-case';
-import { GetResumeExportStatusUseCase } from '@/modules/resume/application/use-cases/get-resume-export-status/get-resume-export-status.use-case';
-import { EnqueueResumeExportUseCase } from '@/modules/resume/application/use-cases/enqueue-resume-export/enqueue-resume-export.use-case';
-import { GetResumesUseCase } from '@/modules/resume/application/use-cases/get-resumes/get-resumes.use-case';
-import { GetResumesListUseCase } from '@/modules/resume/application/use-cases/get-resumes-list/get-resumes-list.use-case';
-import { GetResumeSnapshotsUseCase } from '@/modules/resume/application/use-cases/get-resume-snapshots/get-resume-snapshots.use-case';
-import { PrismaResumeRepository } from '@/modules/resume/infrastructure/persistence/prisma-resume.repository';
-import { PrismaResumeQueryRepository } from '@/modules/resume/infrastructure/persistence/prisma-resume.query.repository';
-import { PrismaResumeSnapshotRepository } from '@/modules/resume/infrastructure/persistence/prisma-resume-snapshot.repository';
-import { PrismaResumeExportQueryRepository } from '@/modules/resume/infrastructure/persistence/prisma-resume-export.query.repository';
-import { ResumeExportService } from '@/modules/resume/infrastructure/services/resume-export.service';
-import { mapAppErrorToHttp } from '@/modules/shared/application/app-error.mapper';
-import { PrismaPlanLimitQueryRepository } from '@/modules/plan/infrastructure/persistence/prisma-plan-limit.query.repository';
+import { mapAppErrorToHttp } from '@/modules/shared/presentation/app-error.mapper';
+import { resumeContainer } from '@/apps/container';
 
-const resumeRepository = new PrismaResumeRepository();
-const resumeQueryRepository = new PrismaResumeQueryRepository();
-const resumeSnapshotRepository = new PrismaResumeSnapshotRepository();
-const resumeExportQueryRepository = new PrismaResumeExportQueryRepository();
-const resumeExportService = new ResumeExportService();
-const planLimitQueryRepository = new PrismaPlanLimitQueryRepository();
-const findResumeByIdUseCase = new FindResumeByIdUseCase(resumeRepository);
-const createResumeUseCase = new CreateResumeUseCase(resumeRepository, planLimitQueryRepository);
-const updateResumeUseCase = new UpdateResumeUseCase(resumeRepository);
-const deleteResumeUseCase = new DeleteResumeUseCase(resumeRepository);
-const createResumeSnapshotUseCase = new CreateResumeSnapshotUseCase(resumeSnapshotRepository);
-const exportResumeUseCase = new ExportResumeUseCase(resumeExportService);
-const getResumeByIdQueryUseCase = new GetResumeByIdQueryUseCase(resumeQueryRepository);
-const getResumeExportsUseCase = new GetResumeExportsUseCase(resumeExportQueryRepository);
-const getResumeExportStatusUseCase = new GetResumeExportStatusUseCase(resumeExportService);
-const enqueueResumeExportUseCase = new EnqueueResumeExportUseCase();
-const getResumesUseCase = new GetResumesUseCase(resumeQueryRepository);
-const getResumesListUseCase = new GetResumesListUseCase(resumeQueryRepository);
-const getResumeSnapshotsUseCase = new GetResumeSnapshotsUseCase(resumeQueryRepository);
+const {
+  getResumesUseCase,
+  getResumesListUseCase,
+  getResumeByIdQueryUseCase,
+  getResumeSnapshotsUseCase,
+  getResumeExportsUseCase,
+  getResumeExportStatusUseCase,
+  exportResumeUseCase,
+  enqueueResumeExportUseCase,
+  createResumeUseCase,
+  updateResumeUseCase,
+  deleteResumeUseCase,
+} = resumeContainer;
 
 async function getResumes(req: Request, response: Response) {
   const request = req as TypedAuthenticatedRequest<ResumeDTO['getResumesList']>;
@@ -259,16 +231,7 @@ async function createResume(req: Request, response: Response) {
     throw mapAppErrorToHttp(result.error);
   }
 
-  const resumeResult = await getResumeByIdQueryUseCase.execute({
-    resumeId: result.getValue().id,
-    userId: request.user.id,
-  });
-
-  if (resumeResult.isFailure) {
-    throw mapAppErrorToHttp(resumeResult.error);
-  }
-
-  const resume = resumeResult.getValue();
+  const resume = result.getValue();
 
   responseService.success(response, {
     message: 'Resume created successfully',
@@ -295,26 +258,7 @@ async function updateResume(req: Request, response: Response) {
   if (result.isFailure) {
     throw mapAppErrorToHttp(result.error);
   }
-
-  const updatedResumeResult = await getResumeByIdQueryUseCase.execute({
-    resumeId,
-    userId: request.user.id,
-  });
-
-  if (updatedResumeResult.isFailure) {
-    throw mapAppErrorToHttp(updatedResumeResult.error);
-  }
-
-  const updatedResume = updatedResumeResult.getValue();
-
-  const snapshotResult = await createResumeSnapshotUseCase.execute({
-    userId: request.user.id,
-    resumeId,
-  });
-
-  if (snapshotResult.isFailure) {
-    throw mapAppErrorToHttp(snapshotResult.error);
-  }
+  const updatedResume = result.getValue();
 
   responseService.success(response, {
     message: 'Resume updated successfully',
@@ -326,17 +270,6 @@ async function deleteResume(req: Request, response: Response) {
   const request = req as TypedAuthenticatedRequest<ResumeDTO['getResumeById']>;
   const { resumeId } = request.parsedParams;
 
-  const existingResult = await getResumeByIdQueryUseCase.execute({
-    resumeId,
-    userId: request.user.id,
-  });
-
-  if (existingResult.isFailure) {
-    throw mapAppErrorToHttp(existingResult.error);
-  }
-
-  const existing = existingResult.getValue();
-
   const result = await deleteResumeUseCase.execute({
     resumeId,
     userId: request.user.id,
@@ -346,7 +279,7 @@ async function deleteResume(req: Request, response: Response) {
     throw mapAppErrorToHttp(result.error);
   }
 
-  const deleted = existing;
+  const deleted = result.getValue();
 
   responseService.success(response, {
     message: 'Resume deleted successfully',

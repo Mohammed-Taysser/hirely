@@ -4,12 +4,10 @@ import type { ExportDTO } from './export.dto';
 
 import responseService from '@/modules/shared/services/response.service';
 import { TypedAuthenticatedRequest } from '@/modules/shared/types/import';
-import { GetExportStatusUseCase } from '@/modules/export/application/use-cases/get-export-status/get-export-status.use-case';
-import { ExportStatusService } from '@/modules/export/infrastructure/services/export-status.service';
-import { mapAppErrorToHttp } from '@/modules/shared/application/app-error.mapper';
+import { mapAppErrorToHttp } from '@/modules/shared/presentation/app-error.mapper';
+import { exportContainer } from '@/apps/container';
 
-const exportStatusService = new ExportStatusService();
-const getExportStatusUseCase = new GetExportStatusUseCase(exportStatusService);
+const { getExportStatusUseCase } = exportContainer;
 
 async function getExportStatus(req: Request, response: Response) {
   const request = req as TypedAuthenticatedRequest<ExportDTO['exportStatus']>;

@@ -1,10 +1,13 @@
 import { NextFunction, Request, Response } from 'express';
 
-import prisma from '@/apps/prisma';
 import errorService from '@/modules/shared/services/error.service';
 import tokenService from '@/modules/shared/services/token.service';
 import { UserTokenPayload } from '@/modules/shared/application/services/token.service.interface';
 import { TypedAuthenticatedRequest } from '@/modules/shared/types/import';
+import { userContainer } from '@/apps/container';
+import { NotFoundError } from '@/modules/shared/application/app-error';
+
+const { getUserByIdQueryUseCase } = userContainer;
 
 async function authenticateMiddleware(req: Request, _res: Response, next: NextFunction) {
   try {
@@ -26,8 +29,8 @@ async function authenticateMiddleware(req: Request, _res: Response, next: NextFu
     let decoded: UserTokenPayload;
     try {
       decoded = tokenService.verifyToken<UserTokenPayload>(token.trim());
-    } catch (error) {
-      return next(error);
+    } catch {
+      return next(errorService.unauthorized('Invalid or expired token'));
     }
 
     // Defensive guard
@@ -36,15 +39,23 @@ async function authenticateMiddleware(req: Request, _res: Response, next: NextFu
     }
 
     // Fetch only required user details (minimal)
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.id },
-    });
-
-    if (!user) {
-      return next(errorService.unauthorized('User not found'));
+    const userResult = await getUserByIdQueryUseCase.execute({ userId: decoded.id });
+    if (userResult.isFailure) {
+      if (userResult.error instanceof NotFoundError) {
+        return next(errorService.unauthorized('User not found'));
+      }
+      return next(errorService.internal());
     }
 
-    request.user = user;
+    const user = userResult.getValue();
+
+    request.user = {
+      id: user.id,
+      planId: user.planId,
+      name: user.name,
+      email: user.email,
+      isVerified: user.isVerified,
+    };
     return next();
   } catch (err) {
     return next(err);

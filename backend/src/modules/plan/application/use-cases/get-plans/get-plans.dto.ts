@@ -1,11 +1,9 @@
-import { Prisma } from '@generated-prisma';
-
-import { PlanDto } from '../../repositories/plan.query.repository.interface';
+import { PlanDto, PlanQueryFilters } from '../../repositories/plan.query.repository.interface';
 
 export interface GetPlansRequestDto {
   page: number;
   limit: number;
-  filters: Prisma.PlanWhereInput;
+  filters: PlanQueryFilters;
 }
 
 export interface GetPlansResponseDto {

@@ -1,13 +1,13 @@
-import { promises as fs } from "fs";
-import path from "path";
-import { pathToFileURL } from "url";
-import type { StorageAdapter, UploadOptions, UploadResult } from "./storage.adapter";
+import { promises as fs } from 'fs';
+import path from 'path';
+import { pathToFileURL } from 'url';
+import type { StorageAdapter, UploadOptions, UploadResult } from './storage.adapter';
 
-const uploadsDir = process.env.UPLOADS_DIR || "uploads";
+const uploadsDir = process.env.UPLOADS_DIR || 'uploads';
 
 const sanitizeKey = (key: string) => {
-  const trimmed = key.replace(/^[/\\]+/, "");
-  return trimmed.replace(/\.\./g, "");
+  const trimmed = key.replace(/^[/\\]+/, '');
+  return trimmed.replace(/\.\./g, '');
 };
 
 export class LocalStorageAdapter implements StorageAdapter {

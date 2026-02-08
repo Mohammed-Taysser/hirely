@@ -1,12 +1,10 @@
 import { Request, Response } from 'express';
 
 import responseService from '@/modules/shared/services/response.service';
-import { GetResumeTemplatesUseCase } from '@/modules/resumeTemplate/application/use-cases/get-resume-templates/get-resume-templates.use-case';
-import { ResumeTemplateService } from '@/modules/resumeTemplate/infrastructure/services/resume-template.service';
-import { mapAppErrorToHttp } from '@/modules/shared/application/app-error.mapper';
+import { mapAppErrorToHttp } from '@/modules/shared/presentation/app-error.mapper';
+import { resumeTemplateContainer } from '@/apps/container';
 
-const resumeTemplateService = new ResumeTemplateService();
-const getResumeTemplatesUseCase = new GetResumeTemplatesUseCase(resumeTemplateService);
+const { getResumeTemplatesUseCase } = resumeTemplateContainer;
 
 class ResumeTemplateController {
   getResumeTemplates = async (req: Request, res: Response) => {

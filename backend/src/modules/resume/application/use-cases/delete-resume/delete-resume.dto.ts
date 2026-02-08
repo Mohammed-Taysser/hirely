@@ -3,6 +3,6 @@ export interface DeleteResumeRequestDto {
   userId: string;
 }
 
-import { ResumeDto } from '../../resume.dto';
+import { ResumeFullDto } from '@/modules/resume/application/repositories/resume.query.repository.interface';
 
-export type DeleteResumeResponseDto = ResumeDto;
+export type DeleteResumeResponseDto = ResumeFullDto;

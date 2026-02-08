@@ -10,9 +10,7 @@ import { Result } from '@/modules/shared/domain';
 
 type RefreshTokenResponse = Result<RefreshTokenResponseDto, ValidationError>;
 
-export class RefreshTokenUseCase
-  implements UseCase<RefreshTokenRequestDto, RefreshTokenResponse>
-{
+export class RefreshTokenUseCase implements UseCase<RefreshTokenRequestDto, RefreshTokenResponse> {
   constructor(private readonly tokenService: ITokenService) {}
 
   public async execute(request: RefreshTokenRequestDto): Promise<RefreshTokenResponse> {

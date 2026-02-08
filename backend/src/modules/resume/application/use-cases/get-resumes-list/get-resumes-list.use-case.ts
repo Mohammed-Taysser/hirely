@@ -7,9 +7,10 @@ import { IResumeQueryRepository } from '@/modules/resume/application/repositorie
 
 type GetResumesListResponse = Result<GetResumesListResponseDto, UnexpectedError>;
 
-export class GetResumesListUseCase
-  implements UseCase<GetResumesListRequestDto, GetResumesListResponse>
-{
+export class GetResumesListUseCase implements UseCase<
+  GetResumesListRequestDto,
+  GetResumesListResponse
+> {
   constructor(private readonly resumeQueryRepository: IResumeQueryRepository) {}
 
   public async execute(request: GetResumesListRequestDto): Promise<GetResumesListResponse> {

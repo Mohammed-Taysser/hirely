@@ -1,6 +1,7 @@
-import { User } from '@generated-prisma';
 import { Request } from 'express';
 import z from 'zod';
+
+import { AuthenticatedUser } from '@/modules/shared/application/authenticated-user';
 
 /**
  * Request extensions used by the validation layer.
@@ -48,5 +49,5 @@ type TypedRequest<T extends ValidateRequestSchemas> = Request &
 type TypedAuthenticatedRequest<T extends ValidateRequestSchemas = ValidateRequestSchemas> =
   TypedRequest<T> &
     InferRequest<T> & {
-      user: User;
+      user: AuthenticatedUser;
     };

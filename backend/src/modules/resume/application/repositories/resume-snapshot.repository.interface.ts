@@ -1,10 +1,10 @@
-import { Prisma } from '@generated-prisma';
+import { ResumeData } from '@hirely/resume-core';
 
 export interface ResumeSnapshotDto {
   id: string;
   resumeId: string;
   userId: string;
-  data: Prisma.JsonValue;
+  data: ResumeData;
   createdAt: Date;
 }
 
