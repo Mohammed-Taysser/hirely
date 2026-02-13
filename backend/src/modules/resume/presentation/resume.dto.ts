@@ -1,6 +1,10 @@
 import { z } from 'zod';
 
 import CONFIG from '@/apps/config';
+import {
+  buildResumeSectionsLimitErrorMessage,
+  exceedsResumeSectionsLimit,
+} from '@/modules/resume/application/policies/resume-sections.policy';
 import { basePaginationSchema, dateRangeSchema } from '@/modules/shared/presentation/filters.dto';
 
 /* -----------------------
@@ -40,8 +44,8 @@ const resumeDataSchema = z
     }),
     sections: z.record(z.string(), sectionSchema),
   })
-  .refine((data) => Object.keys(data.sections).length <= CONFIG.MAX_RESUME_SECTIONS, {
-    message: `Max sections per resume is ${CONFIG.MAX_RESUME_SECTIONS}`,
+  .refine((data) => !exceedsResumeSectionsLimit(data.sections, CONFIG.MAX_RESUME_SECTIONS), {
+    message: buildResumeSectionsLimitErrorMessage(CONFIG.MAX_RESUME_SECTIONS),
   });
 
 const getResumesListSchema = {

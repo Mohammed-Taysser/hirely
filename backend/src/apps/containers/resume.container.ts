@@ -1,3 +1,4 @@
+import CONFIG from '@/apps/config';
 import { RATE_LIMITS } from '@/apps/constant';
 import {
   auditLogService,
@@ -31,6 +32,7 @@ const createResumeUseCase = new CreateResumeUseCase(
   resumeRepository,
   planLimitQueryRepository,
   resumeQueryRepository,
+  CONFIG.MAX_RESUME_SECTIONS,
   systemLogService,
   auditLogService
 );
@@ -38,6 +40,7 @@ const updateResumeUseCase = new UpdateResumeUseCase(
   resumeRepository,
   resumeSnapshotRepository,
   resumeQueryRepository,
+  CONFIG.MAX_RESUME_SECTIONS,
   systemLogService,
   auditLogService
 );

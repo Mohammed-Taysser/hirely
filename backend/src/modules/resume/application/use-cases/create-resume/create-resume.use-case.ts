@@ -9,6 +9,10 @@ import { buildAuditEntity } from '@/modules/audit/application/audit.entity';
 import { IAuditLogService } from '@/modules/audit/application/services/audit-log.service.interface';
 import { IPlanLimitQueryRepository } from '@/modules/plan/application/repositories/plan-limit.query.repository.interface';
 import {
+  buildResumeSectionsLimitErrorMessage,
+  exceedsResumeSectionsLimit,
+} from '@/modules/resume/application/policies/resume-sections.policy';
+import {
   IResumeQueryRepository,
   ResumeFullDto,
 } from '@/modules/resume/application/repositories/resume.query.repository.interface';
@@ -42,6 +46,7 @@ export class CreateResumeUseCase implements UseCase<CreateResumeRequestDto, Crea
     private readonly resumeRepository: IResumeRepository,
     private readonly planLimitQueryRepository: IPlanLimitQueryRepository,
     private readonly resumeQueryRepository: IResumeQueryRepository,
+    private readonly maxResumeSections: number,
     private readonly systemLogService: ISystemLogService,
     private readonly auditLogService: IAuditLogService
   ) {}
@@ -56,6 +61,12 @@ export class CreateResumeUseCase implements UseCase<CreateResumeRequestDto, Crea
     const name = nameResult.getValue();
 
     try {
+      if (exceedsResumeSectionsLimit(request.data.sections, this.maxResumeSections)) {
+        return Result.fail(
+          new ValidationError(buildResumeSectionsLimitErrorMessage(this.maxResumeSections))
+        );
+      }
+
       const planLimit = await this.planLimitQueryRepository.findByPlanId(request.planId);
 
       if (!planLimit) {
