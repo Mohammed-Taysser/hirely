@@ -25,10 +25,13 @@ Coordinate use cases and enforce application workflows. This layer orchestrates 
 
 - `backend/src/modules/resume/application/use-cases/create-resume/*`
 - `backend/src/modules/auth/application/use-cases/login/*`
-- `backend/src/modules/export/application/services/*.interface.ts`
+- `backend/src/modules/resume/application/services/*.interface.ts`
 - `backend/src/modules/billing/application/services/billing.service.interface.ts`
 - `backend/src/modules/activity/application/services/activity.service.interface.ts`
-- `backend/src/modules/export/application/services/export-email-queue.service.interface.ts`
+- `backend/src/modules/resume/application/services/export-email-queue.service.interface.ts`
+- `backend/src/modules/resume/application/services/export-storage.service.interface.ts`
+- `backend/src/modules/resume/application/services/pdf-renderer.service.interface.ts`
+- `backend/src/modules/resume/application/services/resume-template-renderer.service.interface.ts`
 
 ## Guardrails
 

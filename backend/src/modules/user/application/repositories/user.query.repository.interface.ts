@@ -1,4 +1,4 @@
-import { DateRangeInput } from '@/modules/shared/dto/filters.dto';
+import { DateRangeInput } from '@/modules/shared/application/filters';
 
 export interface UserPlanDto {
   id: string;
@@ -9,6 +9,12 @@ export interface UserPlanDto {
 export interface UserBasicDto {
   id: string;
   name: string;
+}
+
+export interface UserAuthDto {
+  id: string;
+  email: string;
+  passwordHash: string;
 }
 
 export interface UserFullDto extends UserBasicDto {
@@ -41,5 +47,6 @@ export interface IUserQueryRepository {
     filters: UserQueryFilters
   ): Promise<[UserFullDto[], number]>;
   getBasicUsers(filters: UserQueryFilters): Promise<UserBasicDto[]>;
+  findAuthByEmail(email: string): Promise<UserAuthDto | null>;
   findById(id: string): Promise<UserFullDto | null>;
 }

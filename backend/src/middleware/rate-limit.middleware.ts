@@ -1,7 +1,9 @@
 import { NextFunction, Request, Response } from 'express';
 
-import cacheService from '@/modules/shared/services/cache.service';
-import errorService from '@/modules/shared/services/error.service';
+import { RateLimitConfig } from '@/apps/constant';
+import cacheService from '@/modules/shared/infrastructure/services/cache.service';
+import loggerService from '@/modules/shared/infrastructure/services/logger.service';
+import errorService from '@/modules/shared/presentation/error.service';
 
 /**
  * Creates a Redis-based rate limiter middleware
@@ -27,12 +29,12 @@ function rateLimiter(options: RateLimitConfig) {
       res.setHeader('X-RateLimit-Reset', ttl);
 
       if (current > max) {
-        return errorService.tooManyRequests('Too many requests, please try again later.');
+        return next(errorService.tooManyRequests('Too many requests, please try again later.'));
       }
 
       next();
     } catch (err) {
-      console.error('Rate limiter error:', err);
+      loggerService.error('Rate limiter error', { error: err });
       next(); // fail open if Redis fails
     }
   };

@@ -1,4 +1,4 @@
-import { DateRangeInput } from '@/modules/shared/dto/filters.dto';
+import { DateRangeInput } from '@/modules/shared/application/filters';
 
 export interface PlanLimitDto {
   id: string;

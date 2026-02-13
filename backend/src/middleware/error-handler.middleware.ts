@@ -1,7 +1,8 @@
 import { ErrorRequestHandler } from 'express';
 
 import CONFIG from '@/apps/config';
-import { BaseError } from '@/modules/shared/services/error.service';
+import loggerService from '@/modules/shared/infrastructure/services/logger.service';
+import { BaseError } from '@/modules/shared/presentation/error.service';
 
 interface ErrorBody {
   success: boolean;
@@ -41,7 +42,7 @@ const errorHandlerMiddleware: ErrorRequestHandler = (
     body.path = request.originalUrl;
     body.method = request.method;
 
-    console.log(body);
+    loggerService.warn(body);
   }
 
   response.status(status).json(body);

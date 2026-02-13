@@ -1,8 +1,8 @@
 import { NextFunction, Request, Response } from 'express';
 import { ZodError } from 'zod';
 
-import errorService from '@/modules/shared/services/error.service';
-import { ValidateRequestSchemas } from '@/modules/shared/types/import';
+import errorService from '@/modules/shared/presentation/error.service';
+import { ValidateRequestSchemas } from '@/modules/shared/presentation/import';
 
 function validateRequest(schemas: ValidateRequestSchemas) {
   return (request: Request, _res: Response, next: NextFunction) => {

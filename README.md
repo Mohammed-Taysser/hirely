@@ -25,6 +25,7 @@ Docs:
 
 - `backend/docs/APP_OVERVIEW.md`
 - `backend/docs/PLAN_CHANGES.md`
+- `backend/docs/AUDIT_LOGS.md`
 - `backend/docs/ddd/domain-layer.md`
 - `backend/docs/ddd/application-layer.md`
 - `backend/docs/ddd/infrastructure-layer.md`

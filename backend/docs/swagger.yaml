@@ -38,6 +38,8 @@ tags:
     description: Resume templates catalog
   - name: Exports
     description: Export status endpoints
+  - name: Audit
+    description: Audit log visibility
 
 paths:
   /health:
@@ -56,6 +58,33 @@ paths:
                     properties:
                       data:
                         $ref: '#/components/schemas/HealthStatus'
+
+  /audit-logs:
+    get:
+      tags: [Audit]
+      summary: Get audit logs by entity
+      parameters:
+        - $ref: '#/components/parameters/PageParameter'
+        - $ref: '#/components/parameters/LimitParameter'
+        - name: entityType
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [user, resume, resumeExport, plan]
+        - name: entityId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Audit logs list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAuditLogsResponse'
 
   /auth/register:
     post:
@@ -839,7 +868,7 @@ paths:
                 type: string
                 format: binary
 
-  /exports/{exportId}/status:
+  /resumes/exports/{exportId}/status:
     get:
       tags: [Exports]
       summary: Get export status
@@ -1147,6 +1176,35 @@ components:
                     hasPrev:
                       type: boolean
 
+    PaginatedAuditLogsResponse:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/AuditLog'
+                metadata:
+                  type: object
+                  properties:
+                    total:
+                      type: integer
+                    page:
+                      type: integer
+                    limit:
+                      type: integer
+                    totalPages:
+                      type: integer
+                    hasNext:
+                      type: boolean
+                    hasPrev:
+                      type: boolean
+
     ExportStatusResponse:
       type: object
       properties:
@@ -1340,6 +1398,31 @@ components:
           type: string
           format: date-time
         updatedAt:
+          type: string
+          format: date-time
+
+    AuditLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        action:
+          type: string
+        actorUserId:
+          type: string
+          format: uuid
+          nullable: true
+        entityType:
+          type: string
+          enum: [user, resume, resumeExport, plan]
+        entityId:
+          type: string
+          format: uuid
+        metadata:
+          type: object
+          nullable: true
+        createdAt:
           type: string
           format: date-time
 

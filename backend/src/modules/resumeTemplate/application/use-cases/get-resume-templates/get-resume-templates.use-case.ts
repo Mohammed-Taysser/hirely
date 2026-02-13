@@ -1,10 +1,10 @@
-import { UnexpectedError } from '@/modules/shared/application/app-error';
-import { UseCase } from '@/modules/shared/application/use-case.interface';
-import { Result } from '@/modules/shared/domain';
 import {
   IResumeTemplateService,
   ResumeTemplateListItem,
 } from '@/modules/resumeTemplate/application/services/resume-template.service.interface';
+import { UnexpectedError } from '@/modules/shared/application/app-error';
+import { UseCase } from '@/modules/shared/application/use-case.interface';
+import { Result } from '@/modules/shared/domain';
 
 type GetResumeTemplatesResponse = Result<ResumeTemplateListItem[], UnexpectedError>;
 

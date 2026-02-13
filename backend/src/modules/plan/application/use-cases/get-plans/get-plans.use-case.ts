@@ -1,9 +1,9 @@
 import { GetPlansRequestDto, GetPlansResponseDto } from './get-plans.dto';
 
+import { IPlanQueryRepository } from '@/modules/plan/application/repositories/plan.query.repository.interface';
 import { UnexpectedError } from '@/modules/shared/application/app-error';
 import { UseCase } from '@/modules/shared/application/use-case.interface';
 import { Result } from '@/modules/shared/domain';
-import { IPlanQueryRepository } from '@/modules/plan/application/repositories/plan.query.repository.interface';
 
 type GetPlansResponse = Result<GetPlansResponseDto, UnexpectedError>;
 

@@ -1,17 +1,18 @@
 import { Prisma } from '@generated-prisma';
+import { ResumeData } from '@hirely/resume-core';
 
 import prisma from '@/apps/prisma';
 import {
   IResumeQueryRepository,
   ResumeBasicDto,
+  ResumeExportDataDto,
   ResumeFullDto,
   ResumeSnapshotDto,
   ResumeQueryFilters,
   ResumeSnapshotsQueryFilters,
 } from '@/modules/resume/application/repositories/resume.query.repository.interface';
-import resumeSelect from '@/modules/shared/prisma-select/resume.select';
-import { toDateTimeFilter } from '@/modules/shared/infra/prisma/filters';
-import { ResumeData } from '@hirely/resume-core';
+import { toDateTimeFilter } from '@/modules/shared/infrastructure/prisma/filters';
+import resumeSelect from '@/modules/shared/infrastructure/prisma-select/resume.select';
 
 const buildResumeFilters = (filters: ResumeQueryFilters): Prisma.ResumeWhereInput => {
   const where: Prisma.ResumeWhereInput = {
@@ -56,6 +57,29 @@ export class PrismaResumeQueryRepository implements IResumeQueryRepository {
     return {
       ...resume,
       data: resume.data as ResumeData,
+    };
+  }
+
+  async findByIdForExport(userId: string, resumeId: string): Promise<ResumeExportDataDto | null> {
+    const resume = await prisma.resume.findFirst({
+      where: { id: resumeId, userId },
+      select: {
+        id: true,
+        userId: true,
+        data: true,
+        templateId: true,
+        themeConfig: true,
+      },
+    });
+
+    if (!resume) {
+      return null;
+    }
+
+    return {
+      ...resume,
+      data: resume.data as ResumeData,
+      themeConfig: resume.themeConfig as Record<string, unknown> | null,
     };
   }
 

@@ -6,7 +6,7 @@ import {
   PlanDto,
   PlanQueryFilters,
 } from '@/modules/plan/application/repositories/plan.query.repository.interface';
-import { toDateTimeFilter } from '@/modules/shared/infra/prisma/filters';
+import { toDateTimeFilter } from '@/modules/shared/infrastructure/prisma/filters';
 
 const buildPlanFilters = (filters: PlanQueryFilters): Prisma.PlanWhereInput => {
   const where: Prisma.PlanWhereInput = {};

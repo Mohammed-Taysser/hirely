@@ -4,13 +4,13 @@ import { AppError, UnexpectedError } from '@/modules/shared/application/app-erro
 import { ITokenService } from '@/modules/shared/application/services/token.service.interface';
 import { UseCase } from '@/modules/shared/application/use-case.interface';
 import { Result } from '@/modules/shared/domain';
-import { CreateUserWithPlanUseCase } from '@/modules/user/application/use-cases/create-user-with-plan/create-user-with-plan.use-case';
+import { ICreateUserWithPlanService } from '@/modules/user/application/services/create-user-with-plan.service.interface';
 
 export type RegisterUserResponse = Result<RegisterUserResponseDto, AppError>;
 
 export class RegisterUserUseCase implements UseCase<RegisterUserRequestDto, RegisterUserResponse> {
   constructor(
-    private readonly createUserWithPlanUseCase: CreateUserWithPlanUseCase,
+    private readonly createUserWithPlanUseCase: ICreateUserWithPlanService,
     private readonly tokenService: ITokenService
   ) {}
 

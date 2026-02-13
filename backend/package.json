@@ -16,6 +16,7 @@
   "scripts": {
     "dev": "tsx watch --watch-path src --watch-path .env --watch-path docs/swagger.yaml src/server.ts",
     "worker:dev": "tsx watch src/workers.ts",
+    "arch:check": "node scripts/check-module-boundaries.mjs",
     "typecheck": "tsc --noEmit",
     "build": "rimraf ./dist && tsc && tsc-alias",
     "start": "node dist/server.js",
@@ -23,7 +24,7 @@
     "format:fix": "prettier --write .",
     "format": "prettier --check .",
     "lint:fix": "eslint ./src --ext .ts --fix",
-    "lint": "eslint ./src --ext .ts",
+    "lint": "npm run arch:check && eslint ./src --ext .ts",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",

@@ -31,6 +31,8 @@ model User {
   snapshots  ResumeSnapshot[]
   exports    ResumeExport[]
   activities ActivityLog[]
+  systemLogs SystemLog[]
+  auditActorLogs AuditLog[] @relation("AuditActor")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -116,6 +118,43 @@ model ActivityLog {
   createdAt DateTime @default(now())
 
   @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model SystemLog {
+  id       String  @id @default(uuid())
+  level    String
+  action   String
+  message  String?
+  metadata Json?
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([level])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id     String @id @default(uuid())
+  action String
+  metadata Json?
+
+  actorUserId String?
+  actorUser   User? @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  entityType String
+  entityId   String
+
+  createdAt DateTime @default(now())
+
+  @@index([actorUserId])
+  @@index([entityType, entityId])
   @@index([action])
   @@index([createdAt])
 }

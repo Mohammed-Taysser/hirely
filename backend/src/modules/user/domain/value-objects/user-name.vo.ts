@@ -1,5 +1,3 @@
-import { z } from 'zod';
-
 import { Result, ValueObject } from '@/modules/shared/domain';
 
 type UserNameProps = {
@@ -16,13 +14,12 @@ export class UserName extends ValueObject<UserNameProps> {
   }
 
   public static create(name: string): Result<UserName> {
-    const schema = z.string().trim().min(2).max(100);
-    const result = schema.safeParse(name);
+    const value = name.trim();
 
-    if (!result.success) {
+    if (value.length < 2 || value.length > 100) {
       return Result.fail('Name must be between 2 and 100 characters long');
     }
 
-    return Result.ok(new UserName({ value: result.data }));
+    return Result.ok(new UserName({ value }));
   }
 }

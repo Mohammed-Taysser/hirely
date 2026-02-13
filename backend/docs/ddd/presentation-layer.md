@@ -12,8 +12,8 @@ Handle delivery mechanisms: HTTP, request validation, authentication, and respon
 
 ## Where To Find It
 
-- `backend/src/modules/*/*.controller.ts`
-- `backend/src/modules/*/*.route.ts`
+- `backend/src/modules/*/presentation/*.controller.ts`
+- `backend/src/modules/*/presentation/*.route.ts`
 - `backend/src/middleware/*`
 - `backend/src/modules/shared/presentation/*`
 
@@ -24,8 +24,8 @@ Handle delivery mechanisms: HTTP, request validation, authentication, and respon
 
 ## Examples
 
-- `backend/src/modules/resume/resume.controller.ts`
-- `backend/src/modules/auth/auth.controller.ts`
+- `backend/src/modules/resume/presentation/resume.controller.ts`
+- `backend/src/modules/auth/presentation/auth.controller.ts`
 - `backend/src/middleware/authenticate.middleware.ts`
 
 ## Guardrails

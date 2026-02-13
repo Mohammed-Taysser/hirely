@@ -1,0 +1,54 @@
+export const SystemActions = {
+  USER_CREATED: 'user.created',
+  USER_CREATE_FAILED: 'user.create.failed',
+  USER_UPDATED: 'user.updated',
+  USER_UPDATE_FAILED: 'user.update.failed',
+  USER_DELETED: 'user.deleted',
+  USER_DELETE_FAILED: 'user.delete.failed',
+  USER_PLAN_CHANGED: 'user.plan.changed',
+  USER_PLAN_SCHEDULED: 'user.plan.scheduled',
+  USER_PLAN_CHANGE_FAILED: 'user.plan.change.failed',
+  USER_PLAN_APPLIED: 'user.plan.applied',
+
+  PLAN_CREATED: 'plan.created',
+  PLAN_CREATE_FAILED: 'plan.create.failed',
+  PLAN_UPDATED: 'plan.updated',
+  PLAN_UPDATE_FAILED: 'plan.update.failed',
+  PLAN_DELETED: 'plan.deleted',
+  PLAN_DELETE_FAILED: 'plan.delete.failed',
+
+  RESUME_CREATED: 'resume.created',
+  RESUME_CREATE_FAILED: 'resume.create.failed',
+  RESUME_UPDATED: 'resume.updated',
+  RESUME_UPDATE_FAILED: 'resume.update.failed',
+  RESUME_DELETED: 'resume.deleted',
+  RESUME_DELETE_FAILED: 'resume.delete.failed',
+  RESUME_EXPORT_ENQUEUED: 'resume.export.enqueued',
+  RESUME_EXPORT_ENQUEUE_FAILED: 'resume.export.enqueue.failed',
+
+  BULK_APPLY_ENQUEUED: 'bulk-apply.enqueued',
+  BULK_APPLY_FAILED: 'bulk-apply.failed',
+
+  PLAN_WORKER_SCHEDULED: 'plan.worker.scheduled',
+  PLAN_WORKER_SCHEDULE_FAILED: 'plan.worker.schedule.failed',
+  PLAN_WORKER_RUN_STARTED: 'plan.worker.run.started',
+  PLAN_WORKER_RUN_COMPLETED: 'plan.worker.run.completed',
+  PLAN_WORKER_READY: 'plan.worker.ready',
+  PLAN_WORKER_RUN_FAILED: 'plan.worker.run.failed',
+
+  EXPORT_PDF_PROCESSING: 'export.pdf.processing',
+  EXPORT_PDF_PROCESSED: 'export.pdf.processed',
+  EXPORT_PDF_FAILED: 'export.pdf.failed',
+  WORKER_PDF_READY: 'worker.pdf.ready',
+  WORKER_PDF_COMPLETED: 'worker.pdf.completed',
+  WORKER_PDF_FAILED: 'worker.pdf.failed',
+
+  EXPORT_EMAIL_PROCESSING: 'export.email.processing',
+  EXPORT_EMAIL_SENT: 'export.email.sent',
+  EXPORT_EMAIL_FAILED: 'export.email.failed',
+  WORKER_EMAIL_READY: 'worker.email.ready',
+  WORKER_EMAIL_COMPLETED: 'worker.email.completed',
+  WORKER_EMAIL_FAILED: 'worker.email.failed',
+} as const;
+
+export type SystemAction = (typeof SystemActions)[keyof typeof SystemActions];

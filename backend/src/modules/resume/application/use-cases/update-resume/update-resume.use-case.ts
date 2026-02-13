@@ -1,5 +1,10 @@
 import { UpdateResumeRequestDto, UpdateResumeResponseDto } from './update-resume.dto';
 
+import { AuditActions } from '@/modules/audit/application/audit.actions';
+import { buildAuditEntity } from '@/modules/audit/application/audit.entity';
+import { IAuditLogService } from '@/modules/audit/application/services/audit-log.service.interface';
+import { IResumeSnapshotRepository } from '@/modules/resume/application/repositories/resume-snapshot.repository.interface';
+import { IResumeQueryRepository } from '@/modules/resume/application/repositories/resume.query.repository.interface';
 import { IResumeRepository } from '@/modules/resume/domain/repositories/resume.repository.interface';
 import { ResumeName } from '@/modules/resume/domain/value-objects/resume-name.vo';
 import {
@@ -9,8 +14,8 @@ import {
 } from '@/modules/shared/application/app-error';
 import { UseCase } from '@/modules/shared/application/use-case.interface';
 import { Result } from '@/modules/shared/domain';
-import { IResumeSnapshotRepository } from '@/modules/resume/application/repositories/resume-snapshot.repository.interface';
-import { IResumeQueryRepository } from '@/modules/resume/application/repositories/resume.query.repository.interface';
+import { ISystemLogService } from '@/modules/system/application/services/system-log.service.interface';
+import { SystemActions } from '@/modules/system/application/system.actions';
 
 type UpdateResumeResponse = Result<
   UpdateResumeResponseDto,
@@ -21,7 +26,9 @@ export class UpdateResumeUseCase implements UseCase<UpdateResumeRequestDto, Upda
   constructor(
     private readonly resumeRepository: IResumeRepository,
     private readonly resumeSnapshotRepository: IResumeSnapshotRepository,
-    private readonly resumeQueryRepository: IResumeQueryRepository
+    private readonly resumeQueryRepository: IResumeQueryRepository,
+    private readonly systemLogService: ISystemLogService,
+    private readonly auditLogService: IAuditLogService
   ) {}
 
   public async execute(request: UpdateResumeRequestDto): Promise<UpdateResumeResponse> {
@@ -69,8 +76,44 @@ export class UpdateResumeUseCase implements UseCase<UpdateResumeRequestDto, Upda
         return Result.fail(new NotFoundError('Resume not found'));
       }
 
+      await this.systemLogService.log({
+        level: 'info',
+        action: SystemActions.RESUME_UPDATED,
+        userId: request.userId,
+        metadata: {
+          resumeId: request.resumeId,
+          updatedFields: {
+            name: Boolean(request.name),
+            data: Boolean(request.data),
+            templateId: Boolean(request.templateId),
+            themeConfig: Boolean(request.themeConfig),
+          },
+        },
+      });
+
+      await this.auditLogService.log({
+        action: AuditActions.RESUME_UPDATED,
+        actorUserId: request.userId,
+        ...buildAuditEntity('resume', request.resumeId),
+        metadata: {
+          updatedFields: {
+            name: Boolean(request.name),
+            data: Boolean(request.data),
+            templateId: Boolean(request.templateId),
+            themeConfig: Boolean(request.themeConfig),
+          },
+        },
+      });
+
       return Result.ok(updated);
     } catch (err) {
+      await this.systemLogService.log({
+        level: 'error',
+        action: SystemActions.RESUME_UPDATE_FAILED,
+        userId: request.userId,
+        metadata: { resumeId: request.resumeId },
+        message: err instanceof Error ? err.message : 'Unknown error',
+      });
       return Result.fail(new UnexpectedError(err));
     }
   }

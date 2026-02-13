@@ -1,12 +1,12 @@
 import { GetPlanByIdRequestDto } from './get-plan-by-id.dto';
 
-import { NotFoundError, UnexpectedError } from '@/modules/shared/application/app-error';
-import { UseCase } from '@/modules/shared/application/use-case.interface';
-import { Result } from '@/modules/shared/domain';
 import {
   IPlanQueryRepository,
   PlanDto,
 } from '@/modules/plan/application/repositories/plan.query.repository.interface';
+import { NotFoundError, UnexpectedError } from '@/modules/shared/application/app-error';
+import { UseCase } from '@/modules/shared/application/use-case.interface';
+import { Result } from '@/modules/shared/domain';
 
 type GetPlanByIdResponse = Result<PlanDto, NotFoundError | UnexpectedError>;
 

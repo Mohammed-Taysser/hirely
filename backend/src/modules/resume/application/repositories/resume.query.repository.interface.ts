@@ -1,6 +1,6 @@
 import { ResumeData } from '@hirely/resume-core';
 
-import { DateRangeInput } from '@/modules/shared/dto/filters.dto';
+import { DateRangeInput } from '@/modules/shared/application/filters';
 
 export interface ResumeBasicDto {
   id: string;
@@ -22,6 +22,14 @@ export interface ResumeSnapshotDto {
   createdAt: Date;
 }
 
+export interface ResumeExportDataDto {
+  id: string;
+  userId: string;
+  data: ResumeData;
+  templateId: string | null;
+  themeConfig: Record<string, unknown> | null;
+}
+
 export interface ResumeQueryFilters {
   userId: string;
   createdAt?: DateRangeInput;
@@ -35,6 +43,7 @@ export interface ResumeSnapshotsQueryFilters {
 
 export interface IResumeQueryRepository {
   findById(id: string, userId: string): Promise<ResumeFullDto | null>;
+  findByIdForExport(userId: string, resumeId: string): Promise<ResumeExportDataDto | null>;
   getPaginatedResumes(
     page: number,
     limit: number,

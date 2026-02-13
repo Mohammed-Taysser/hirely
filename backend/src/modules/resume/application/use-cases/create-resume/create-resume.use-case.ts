@@ -4,18 +4,23 @@ import { IResumeRepository } from '../../../domain/repositories/resume.repositor
 import { Resume } from '../../../domain/resume.aggregate';
 import { ResumeName } from '../../../domain/value-objects/resume-name.vo';
 
+import { AuditActions } from '@/modules/audit/application/audit.actions';
+import { buildAuditEntity } from '@/modules/audit/application/audit.entity';
+import { IAuditLogService } from '@/modules/audit/application/services/audit-log.service.interface';
+import { IPlanLimitQueryRepository } from '@/modules/plan/application/repositories/plan-limit.query.repository.interface';
+import {
+  IResumeQueryRepository,
+  ResumeFullDto,
+} from '@/modules/resume/application/repositories/resume.query.repository.interface';
 import {
   ForbiddenError,
   UnexpectedError,
   ValidationError,
 } from '@/modules/shared/application/app-error';
-import { IPlanLimitQueryRepository } from '@/modules/plan/application/repositories/plan-limit.query.repository.interface';
 import { UseCase } from '@/modules/shared/application/use-case.interface';
 import { Result } from '@/modules/shared/domain';
-import {
-  IResumeQueryRepository,
-  ResumeFullDto,
-} from '@/modules/resume/application/repositories/resume.query.repository.interface';
+import { ISystemLogService } from '@/modules/system/application/services/system-log.service.interface';
+import { SystemActions } from '@/modules/system/application/system.actions';
 
 export interface CreateResumeRequestDto {
   userId: string;
@@ -36,7 +41,9 @@ export class CreateResumeUseCase implements UseCase<CreateResumeRequestDto, Crea
   constructor(
     private readonly resumeRepository: IResumeRepository,
     private readonly planLimitQueryRepository: IPlanLimitQueryRepository,
-    private readonly resumeQueryRepository: IResumeQueryRepository
+    private readonly resumeQueryRepository: IResumeQueryRepository,
+    private readonly systemLogService: ISystemLogService,
+    private readonly auditLogService: IAuditLogService
   ) {}
 
   public async execute(request: CreateResumeRequestDto): Promise<CreateResumeResponse> {
@@ -83,8 +90,35 @@ export class CreateResumeUseCase implements UseCase<CreateResumeRequestDto, Crea
         return Result.fail(new UnexpectedError(new Error('Created resume not found')));
       }
 
+      await this.systemLogService.log({
+        level: 'info',
+        action: SystemActions.RESUME_CREATED,
+        userId: request.userId,
+        metadata: {
+          resumeId: resume.id,
+          templateId: request.templateId,
+          templateVersion: request.templateVersion ?? null,
+        },
+      });
+
+      await this.auditLogService.log({
+        action: AuditActions.RESUME_CREATED,
+        actorUserId: request.userId,
+        ...buildAuditEntity('resume', resume.id),
+        metadata: {
+          templateId: request.templateId,
+          templateVersion: request.templateVersion ?? null,
+        },
+      });
+
       return Result.ok(created);
     } catch (err) {
+      await this.systemLogService.log({
+        level: 'error',
+        action: SystemActions.RESUME_CREATE_FAILED,
+        userId: request.userId,
+        message: err instanceof Error ? err.message : 'Unknown error',
+      });
       return Result.fail(new UnexpectedError(err));
     }
   }

@@ -1,20 +1,27 @@
 import { DeletePlanRequestDto } from './delete-plan.dto';
 
-import { NotFoundError, UnexpectedError } from '@/modules/shared/application/app-error';
-import { UseCase } from '@/modules/shared/application/use-case.interface';
-import { Result } from '@/modules/shared/domain';
+import { AuditActions } from '@/modules/audit/application/audit.actions';
+import { buildAuditEntity } from '@/modules/audit/application/audit.entity';
+import { IAuditLogService } from '@/modules/audit/application/services/audit-log.service.interface';
 import { IPlanCommandRepository } from '@/modules/plan/application/repositories/plan.command.repository.interface';
 import {
   IPlanQueryRepository,
   PlanDto,
 } from '@/modules/plan/application/repositories/plan.query.repository.interface';
+import { NotFoundError, UnexpectedError } from '@/modules/shared/application/app-error';
+import { UseCase } from '@/modules/shared/application/use-case.interface';
+import { Result } from '@/modules/shared/domain';
+import { ISystemLogService } from '@/modules/system/application/services/system-log.service.interface';
+import { SystemActions } from '@/modules/system/application/system.actions';
 
 type DeletePlanResponse = Result<PlanDto, NotFoundError | UnexpectedError>;
 
 export class DeletePlanUseCase implements UseCase<DeletePlanRequestDto, DeletePlanResponse> {
   constructor(
     private readonly planCommandRepository: IPlanCommandRepository,
-    private readonly planQueryRepository: IPlanQueryRepository
+    private readonly planQueryRepository: IPlanQueryRepository,
+    private readonly systemLogService: ISystemLogService,
+    private readonly auditLogService: IAuditLogService
   ) {}
 
   public async execute(request: DeletePlanRequestDto): Promise<DeletePlanResponse> {
@@ -25,9 +32,28 @@ export class DeletePlanUseCase implements UseCase<DeletePlanRequestDto, DeletePl
         return Result.fail(new NotFoundError('Plan not found'));
       }
 
+      await this.systemLogService.log({
+        level: 'info',
+        action: SystemActions.PLAN_DELETED,
+        metadata: { planId: existing.id, code: existing.code },
+      });
+
+      await this.auditLogService.log({
+        action: AuditActions.PLAN_DELETED,
+        ...buildAuditEntity('plan', existing.id),
+        metadata: { code: existing.code },
+      });
+
       const plan = await this.planCommandRepository.delete(request.planId);
+
       return Result.ok(plan);
     } catch (err) {
+      await this.systemLogService.log({
+        level: 'error',
+        action: SystemActions.PLAN_DELETE_FAILED,
+        metadata: { planId: request.planId },
+        message: err instanceof Error ? err.message : 'Unknown error',
+      });
       return Result.fail(new UnexpectedError(err));
     }
   }

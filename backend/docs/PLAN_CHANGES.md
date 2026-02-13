@@ -44,8 +44,8 @@ If `scheduleAt` is in the future, the plan change is stored as `pendingPlanId` a
 ## Implementation Notes
 
 - Use case: `backend/src/modules/user/application/use-cases/change-user-plan/change-user-plan.use-case.ts`
-- Controller: `backend/src/modules/user/user.controller.ts`
-- Route: `backend/src/modules/user/user.route.ts`
+- Controller: `backend/src/modules/user/presentation/user.controller.ts`
+- Route: `backend/src/modules/user/presentation/user.route.ts`
 
 ## Future Enhancements
 

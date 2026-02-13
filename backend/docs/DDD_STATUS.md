@@ -1,6 +1,6 @@
 # DDD Implementation Status Report
 
-**Date:** February 3, 2026
+**Date:** February 8, 2026
 
 ## ✅ Completed Tasks
 
@@ -10,7 +10,7 @@ We have successfully migrated the `User` and `Resume` modules to a Domain-Driven
 
 - **Aggregates:** `User`, `Resume`
 - **Value Objects:** `UserEmail`, `UserName`, `UserPassword`, `ResumeName`
-- **Validation:** Utilized `zod` for robust, declarative validation within Value Objects.
+- **Validation:** Manual validation inside Value Objects (no schema libraries in the domain layer).
 
 ### 2. Application Layer (The Orchestrator)
 
@@ -35,7 +35,6 @@ We have successfully migrated the `User` and `Resume` modules to a Domain-Driven
 The following areas contain existing errors (unrelated to the recent DDD refactor) that may prevent a full project build:
 
 - `src/commands/bulkApply.command.ts`: Missing imports and type errors.
-- `src/infra/storage/s3.adapter.ts`: Missing AWS SDK types.
 - `src/middleware/authenticate.middleware.ts`: Type import mismatches.
 
 ## 🎯 Recommendations for Next Steps

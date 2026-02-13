@@ -1,12 +1,12 @@
 import { Prisma } from '@generated-prisma';
 
 import prisma from '@/apps/prisma';
-import { IPlanCommandRepository } from '@/modules/plan/application/repositories/plan.command.repository.interface';
-import { PlanDto } from '@/modules/plan/application/repositories/plan.query.repository.interface';
 import {
   CreatePlanRequestDto,
   UpdatePlanDataDto,
 } from '@/modules/plan/application/dto/plan-command.dto';
+import { IPlanCommandRepository } from '@/modules/plan/application/repositories/plan.command.repository.interface';
+import { PlanDto } from '@/modules/plan/application/repositories/plan.query.repository.interface';
 
 export class PrismaPlanCommandRepository implements IPlanCommandRepository {
   async create(data: CreatePlanRequestDto): Promise<PlanDto> {

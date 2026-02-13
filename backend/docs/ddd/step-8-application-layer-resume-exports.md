@@ -46,7 +46,12 @@ backend/src/modules/resume/
 │   │   └── resume-snapshot.repository.interface.ts
 │   │   └── resume-export.query.repository.interface.ts
 │   ├── services/
-│   │   └── resume-export.service.interface.ts
+│   │   └── export.service.interface.ts
+│   │   └── export.service.ts
+│   │   └── export-status.service.interface.ts
+│   │   └── export-queue.service.interface.ts
+│   │   └── export-email-queue.service.interface.ts
+│   │   └── export-email.service.interface.ts
 │   └── use-cases/
 │       └── export-resume/
 │           ├── export-resume.dto.ts
@@ -65,7 +70,12 @@ backend/src/modules/resume/
     │   └── prisma-resume-snapshot.repository.ts
     │   └── prisma-resume-export.query.repository.ts
     └── services/
-        └── resume-export.service.ts
+        └── gotenberg-pdf-renderer.service.ts
+        └── local-export-storage.service.ts
+        └── resume-template-renderer.service.ts
+        └── bullmq-export-queue.service.ts
+        └── bullmq-export-email-queue.service.ts
+        └── export-email.service.ts
 ```
 
 ## 🛠️ Design Decisions

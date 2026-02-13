@@ -5,46 +5,51 @@ import { IPasswordHasher } from '@/modules/shared/application/services/password-
 import { ITokenService } from '@/modules/shared/application/services/token.service.interface';
 import { UseCase } from '@/modules/shared/application/use-case.interface';
 import { Result } from '@/modules/shared/domain';
-import { IUserRepository } from '@/modules/user/domain/repositories/user.repository.interface';
-import { UserEmail } from '@/modules/user/domain/value-objects/user-email.vo';
 import { IUserQueryRepository } from '@/modules/user/application/repositories/user.query.repository.interface';
 
 type LoginResponse = Result<LoginResponseDto, ValidationError | UnexpectedError>;
 
+const isEmailValid = (value: string): boolean => {
+  const atIndex = value.indexOf('@');
+  if (atIndex <= 0 || atIndex !== value.lastIndexOf('@')) {
+    return false;
+  }
+
+  const domain = value.slice(atIndex + 1);
+  if (!domain || domain.startsWith('.') || domain.endsWith('.')) {
+    return false;
+  }
+
+  return domain.includes('.');
+};
+
 export class LoginUseCase implements UseCase<LoginRequestDto, LoginResponse> {
   constructor(
-    private readonly userRepository: IUserRepository,
     private readonly tokenService: ITokenService,
     private readonly passwordHasher: IPasswordHasher,
     private readonly userQueryRepository: IUserQueryRepository
   ) {}
 
   public async execute(request: LoginRequestDto): Promise<LoginResponse> {
-    const emailHelper = UserEmail.create(request.email);
-
-    if (emailHelper.isFailure) {
-      return Result.fail(new ValidationError(emailHelper.error as string));
+    const email = request.email.trim();
+    if (!isEmailValid(email)) {
+      return Result.fail(new ValidationError('Email address is invalid'));
     }
 
-    const email = emailHelper.getValue();
-
     try {
-      const user = await this.userRepository.findByEmail(email);
+      const user = await this.userQueryRepository.findAuthByEmail(email);
 
       if (!user) {
         return Result.fail(new ValidationError('Invalid credentials'));
       }
 
-      const passwordValid = await this.passwordHasher.compare(
-        request.password,
-        user.password.value
-      );
+      const passwordValid = await this.passwordHasher.compare(request.password, user.passwordHash);
 
       if (!passwordValid) {
         return Result.fail(new ValidationError('Invalid credentials'));
       }
 
-      const payload = { id: user.id, email: user.email.value };
+      const payload = { id: user.id, email: user.email };
       const accessToken = this.tokenService.signAccessToken(payload);
       const refreshToken = this.tokenService.signRefreshToken(payload);
 

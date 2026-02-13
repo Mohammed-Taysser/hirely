@@ -1,22 +1,27 @@
-import { canDirectDownload } from '@/modules/export/export.policy';
+import {
+  EnqueueResumeExportRequestDto,
+  EnqueueResumeExportResponseDto,
+} from './enqueue-resume-export.dto';
+
+import { AuditActions } from '@/modules/audit/application/audit.actions';
+import { buildAuditEntity } from '@/modules/audit/application/audit.entity';
+import { IAuditLogService } from '@/modules/audit/application/services/audit-log.service.interface';
+import { canDirectDownload } from '@/modules/resume/application/policies/export.policy';
+import { IResumeSnapshotRepository } from '@/modules/resume/application/repositories/resume-snapshot.repository.interface';
+import { IExportQueueService } from '@/modules/resume/application/services/export-queue.service.interface';
+import { IExportService } from '@/modules/resume/application/services/export.service.interface';
 import {
   AppError,
   NotFoundError,
   TooManyRequestsError,
   UnexpectedError,
 } from '@/modules/shared/application/app-error';
+import { IRateLimiter } from '@/modules/shared/application/services/rate-limiter.service.interface';
 import { UseCase } from '@/modules/shared/application/use-case.interface';
 import { Result } from '@/modules/shared/domain';
-
-import {
-  EnqueueResumeExportRequestDto,
-  EnqueueResumeExportResponseDto,
-} from './enqueue-resume-export.dto';
-import { IExportService } from '@/modules/export/application/services/export.service.interface';
-import { IExportQueueService } from '@/modules/export/application/services/export-queue.service.interface';
-import { IResumeSnapshotRepository } from '@/modules/resume/application/repositories/resume-snapshot.repository.interface';
+import { ISystemLogService } from '@/modules/system/application/services/system-log.service.interface';
+import { SystemActions } from '@/modules/system/application/system.actions';
 import { IUserQueryRepository } from '@/modules/user/application/repositories/user.query.repository.interface';
-import { IRateLimiter } from '@/modules/shared/application/services/rate-limiter.service.interface';
 
 type EnqueueResumeExportResponse = Result<EnqueueResumeExportResponseDto, AppError>;
 
@@ -29,7 +34,9 @@ export class EnqueueResumeExportUseCase implements UseCase<
     private readonly exportQueueService: IExportQueueService,
     private readonly resumeSnapshotRepository: IResumeSnapshotRepository,
     private readonly userQueryRepository: IUserQueryRepository,
-    private readonly rateLimiter: IRateLimiter
+    private readonly rateLimiter: IRateLimiter,
+    private readonly systemLogService: ISystemLogService,
+    private readonly auditLogService: IAuditLogService
   ) {}
 
   public async execute(
@@ -73,11 +80,43 @@ export class EnqueueResumeExportUseCase implements UseCase<
         userId: request.user.id,
       });
 
+      const delivery = canDirectDownload(user.plan.code) ? 'download' : 'email';
+
+      await this.systemLogService.log({
+        level: 'info',
+        action: SystemActions.RESUME_EXPORT_ENQUEUED,
+        userId: request.user.id,
+        metadata: {
+          exportId: exportRecord.id,
+          resumeId: request.resumeId,
+          delivery,
+        },
+      });
+
+      await this.auditLogService.log({
+        action: AuditActions.EXPORT_ENQUEUED,
+        actorUserId: request.user.id,
+        ...buildAuditEntity('resumeExport', exportRecord.id),
+        metadata: {
+          resumeId: request.resumeId,
+          snapshotId: snapshot.id,
+          delivery,
+        },
+      });
+
       return Result.ok({
         exportId: exportRecord.id,
-        delivery: canDirectDownload(user.plan.code) ? 'download' : 'email',
+        delivery,
       });
     } catch (err) {
+      await this.systemLogService.log({
+        level: 'error',
+        action: SystemActions.RESUME_EXPORT_ENQUEUE_FAILED,
+        userId: request.user.id,
+        metadata: { resumeId: request.resumeId },
+        message: err instanceof Error ? err.message : 'Unknown error',
+      });
+
       if (err instanceof AppError) {
         return Result.fail(err);
       }

@@ -9,7 +9,7 @@ import { Entity } from './entity.base';
  * within the aggregate boundary.
  */
 export abstract class AggregateRoot<T> extends Entity<T> {
-  private _domainEvents: IDomainEvent[] = []; // Placeholder for domain events logic
+  private _domainEvents: IDomainEvent[] = [];
 
   get domainEvents(): IDomainEvent[] {
     return this._domainEvents;
@@ -21,8 +21,6 @@ export abstract class AggregateRoot<T> extends Entity<T> {
     // Add this aggregate instance to the DomainEvents' list of aggregates who have
     // events to notify subscribers about.
     DomainEvents.markAggregateForDispatch(this);
-    // Log the event for debugging purposes
-    console.log(`[Domain Event Created]:`, domainEvent.constructor.name);
   }
 
   public clearEvents(): void {

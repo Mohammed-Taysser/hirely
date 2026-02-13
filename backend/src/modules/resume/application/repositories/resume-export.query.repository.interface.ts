@@ -1,5 +1,5 @@
-import { DateRangeInput } from '@/modules/shared/dto/filters.dto';
-import { ExportStatus } from '@/modules/export/application/export-status';
+import { ExportStatus } from '@/modules/resume/application/export-status';
+import { DateRangeInput } from '@/modules/shared/application/filters';
 
 export interface ResumeExportDto {
   id: string;
@@ -26,4 +26,10 @@ export interface IResumeExportQueryRepository {
     limit: number,
     filters: ResumeExportQueryFilters
   ): Promise<[ResumeExportDto[], number]>;
+  findById(userId: string, exportId: string): Promise<ResumeExportDto | null>;
+  findByIdForResume(
+    userId: string,
+    resumeId: string,
+    exportId: string
+  ): Promise<ResumeExportDto | null>;
 }

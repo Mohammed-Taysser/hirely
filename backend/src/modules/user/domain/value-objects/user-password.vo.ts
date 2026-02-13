@@ -1,5 +1,3 @@
-import { z } from 'zod';
-
 import { Result, ValueObject } from '@/modules/shared/domain';
 
 type UserPasswordProps = {
@@ -22,9 +20,7 @@ export class UserPassword extends ValueObject<UserPasswordProps> {
 
   public static create(password: string, isHashed: boolean = false): Result<UserPassword> {
     if (!isHashed) {
-      const schema = z.string().min(8);
-      const result = schema.safeParse(password);
-      if (!result.success) {
+      if (password.length < 8) {
         return Result.fail('Password must be at least 8 characters long');
       }
     }

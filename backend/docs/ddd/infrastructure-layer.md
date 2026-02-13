@@ -14,7 +14,6 @@ Provide technical implementations for application interfaces: persistence, messa
 ## Where To Find It
 
 - `backend/src/modules/*/infrastructure/*`
-- `backend/src/infra/*`
 - `backend/src/apps/*` (composition/config)
 
 ## Dependencies
@@ -25,11 +24,12 @@ Provide technical implementations for application interfaces: persistence, messa
 ## Examples
 
 - `backend/src/modules/user/infrastructure/persistence/prisma-user.repository.ts`
-- `backend/src/modules/export/infrastructure/services/export.service.ts`
+- `backend/src/modules/resume/infrastructure/services/gotenberg-pdf-renderer.service.ts`
+- `backend/src/modules/resume/infrastructure/services/local-export-storage.service.ts`
+- `backend/src/modules/resume/infrastructure/services/resume-template-renderer.service.ts`
 - `backend/src/modules/billing/infrastructure/services/billing.service.ts`
 - `backend/src/modules/activity/infrastructure/services/activity.service.ts`
-- `backend/src/modules/export/infrastructure/services/bullmq-export-email-queue.service.ts`
-- `backend/src/infra/storage/*`
+- `backend/src/modules/resume/infrastructure/services/bullmq-export-email-queue.service.ts`
 
 ## Guardrails
 

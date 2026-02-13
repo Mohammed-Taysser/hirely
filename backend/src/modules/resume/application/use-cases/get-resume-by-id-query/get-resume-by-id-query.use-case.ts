@@ -1,12 +1,12 @@
 import { GetResumeByIdQueryRequestDto } from './get-resume-by-id-query.dto';
 
-import { NotFoundError, UnexpectedError } from '@/modules/shared/application/app-error';
-import { UseCase } from '@/modules/shared/application/use-case.interface';
-import { Result } from '@/modules/shared/domain';
 import {
   IResumeQueryRepository,
   ResumeFullDto,
 } from '@/modules/resume/application/repositories/resume.query.repository.interface';
+import { NotFoundError, UnexpectedError } from '@/modules/shared/application/app-error';
+import { UseCase } from '@/modules/shared/application/use-case.interface';
+import { Result } from '@/modules/shared/domain';
 
 type GetResumeByIdQueryResponse = Result<ResumeFullDto, NotFoundError | UnexpectedError>;
 

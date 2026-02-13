@@ -1,8 +1,8 @@
-import { PlanDto } from '@/modules/plan/application/repositories/plan.query.repository.interface';
 import {
   CreatePlanRequestDto,
   UpdatePlanDataDto,
 } from '@/modules/plan/application/dto/plan-command.dto';
+import { PlanDto } from '@/modules/plan/application/repositories/plan.query.repository.interface';
 
 export interface IPlanCommandRepository {
   create(data: CreatePlanRequestDto): Promise<PlanDto>;

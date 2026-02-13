@@ -1,26 +1,24 @@
 import { GetResumeExportStatusRequestDto } from './get-resume-export-status.dto';
 
+import { ExportStatusResult } from '@/modules/resume/application/services/export-status.service.interface';
+import { IExportService } from '@/modules/resume/application/services/export.service.interface';
 import { AppError, UnexpectedError } from '@/modules/shared/application/app-error';
 import { UseCase } from '@/modules/shared/application/use-case.interface';
 import { Result } from '@/modules/shared/domain';
-import {
-  IResumeExportService,
-  ResumeExportStatusResult,
-} from '@/modules/resume/application/services/resume-export.service.interface';
 
-type GetResumeExportStatusResponse = Result<ResumeExportStatusResult, AppError>;
+type GetResumeExportStatusResponse = Result<ExportStatusResult, AppError>;
 
 export class GetResumeExportStatusUseCase implements UseCase<
   GetResumeExportStatusRequestDto,
   GetResumeExportStatusResponse
 > {
-  constructor(private readonly resumeExportService: IResumeExportService) {}
+  constructor(private readonly exportService: IExportService) {}
 
   public async execute(
     request: GetResumeExportStatusRequestDto
   ): Promise<GetResumeExportStatusResponse> {
     try {
-      const status = await this.resumeExportService.getExportStatusForResume(
+      const status = await this.exportService.getExportStatusForResume(
         request.userId,
         request.resumeId,
         request.exportId

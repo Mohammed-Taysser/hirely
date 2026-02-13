@@ -8,7 +8,7 @@ import {
   UnexpectedError,
   ValidationError,
 } from '@/modules/shared/application/app-error';
-import errorService from '@/modules/shared/services/error.service';
+import errorService from '@/modules/shared/presentation/error.service';
 
 const mapAppErrorToHttp = (error: AppError | null | undefined) => {
   if (!error) {

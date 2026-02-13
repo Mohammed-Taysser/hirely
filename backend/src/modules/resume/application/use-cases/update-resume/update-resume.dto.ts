@@ -1,4 +1,5 @@
 import { ResumeData } from '@hirely/resume-core';
+
 import { ResumeFullDto } from '@/modules/resume/application/repositories/resume.query.repository.interface';
 
 export interface UpdateResumeRequestDto {

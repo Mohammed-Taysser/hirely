@@ -2,13 +2,41 @@ import { Worker } from 'bullmq';
 
 import CONFIG from '@/apps/config';
 import { QUEUE_NAMES } from '@/apps/constant';
-import prisma from '@/apps/prisma';
 import { redisConnectionOptions } from '@/apps/redis';
+import {
+  applyScheduledPlanChangesUseCase,
+  auditLogService,
+  systemLogService,
+} from '@/apps/worker-containers/plan-worker.container';
 import planQueue from '@/jobs/queues/plan.queue';
+import { AuditActions } from '@/modules/audit/application/audit.actions';
+import { buildAuditEntity } from '@/modules/audit/application/audit.entity';
+import { SystemLogInput } from '@/modules/system/application/services/system-log.service.interface';
+import { SystemActions } from '@/modules/system/application/system.actions';
 import { logger } from '@/shared/logger';
 
 const JOB_NAME = 'apply-scheduled-plan-changes';
 const DEFAULT_INTERVAL_MS = CONFIG.PLAN_CHANGE_INTERVAL_SECONDS * 1000;
+
+const logSystem = async (input: SystemLogInput) => {
+  try {
+    await systemLogService.log(input);
+  } catch (error) {
+    logger.error('Failed to write system log', { error });
+  }
+};
+
+const logAudit = async (
+  input: { action: string; actorUserId?: string; metadata?: Record<string, unknown> } & ReturnType<
+    typeof buildAuditEntity
+  >
+) => {
+  try {
+    await auditLogService.log(input);
+  } catch (error) {
+    logger.error('Failed to write audit log', { error });
+  }
+};
 
 const scheduleRepeatableJob = async () => {
   await planQueue.add(
@@ -23,51 +51,78 @@ const scheduleRepeatableJob = async () => {
 };
 
 const applyScheduledPlanChanges = async () => {
-  const now = new Date();
-  const users = await prisma.user.findMany({
-    where: {
-      pendingPlanId: { not: null },
-      pendingPlanAt: { lte: now },
-    },
-    select: { id: true, pendingPlanId: true },
-  });
+  const result = await applyScheduledPlanChangesUseCase.execute({ now: new Date() });
+  if (result.isFailure) {
+    throw result.error;
+  }
 
-  for (const user of users) {
-    if (!user.pendingPlanId) continue;
+  const appliedChanges = result.getValue();
+  for (const change of appliedChanges) {
+    await logSystem({
+      level: 'info',
+      action: SystemActions.USER_PLAN_APPLIED,
+      userId: change.userId,
+      metadata: {
+        planId: change.planId,
+        scheduled: true,
+      },
+    });
 
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        planId: user.pendingPlanId,
-        pendingPlanId: null,
-        pendingPlanAt: null,
+    await logAudit({
+      action: AuditActions.USER_PLAN_APPLIED,
+      actorUserId: change.userId,
+      ...buildAuditEntity('user', change.userId),
+      metadata: {
+        planId: change.planId,
+        scheduled: true,
       },
     });
   }
 
-  return users.length;
+  return appliedChanges.length;
 };
 
 export const startPlanWorker = () => {
-  scheduleRepeatableJob().catch((error) => {
-    logger.error('Failed to schedule plan change job', { error });
-  });
+  scheduleRepeatableJob()
+    .then(() =>
+      logSystem({
+        level: 'info',
+        action: SystemActions.PLAN_WORKER_SCHEDULED,
+        metadata: { intervalSeconds: CONFIG.PLAN_CHANGE_INTERVAL_SECONDS },
+      })
+    )
+    .catch((error) => {
+      logSystem({
+        level: 'error',
+        action: SystemActions.PLAN_WORKER_SCHEDULE_FAILED,
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    });
 
   return new Worker(
     QUEUE_NAMES.planChanges,
     async () => {
-      logger.info('Applying scheduled plan changes');
+      await logSystem({ level: 'info', action: SystemActions.PLAN_WORKER_RUN_STARTED });
       const updated = await applyScheduledPlanChanges();
-      logger.info('Scheduled plan changes applied', { updated });
+      await logSystem({
+        level: 'info',
+        action: SystemActions.PLAN_WORKER_RUN_COMPLETED,
+        metadata: { updated },
+      });
     },
     {
       connection: redisConnectionOptions,
     }
   )
     .on('ready', () => {
-      logger.info('Plan change worker is ready and listening');
+      logSystem({ level: 'info', action: SystemActions.PLAN_WORKER_READY });
     })
     .on('failed', (job, err) => {
-      logger.error('Plan change job failed', { jobId: job?.id, error: err.message });
+      logSystem({
+        level: 'error',
+        action: SystemActions.PLAN_WORKER_RUN_FAILED,
+        metadata: { jobId: job?.id },
+        message: err.message,
+      });
     });
 };

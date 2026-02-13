@@ -1,8 +1,19 @@
-import { applyContainer } from '@/apps/container';
-import { bulkApplySchema } from '@/modules/apply/application/dto/bulk-apply.dto';
+import { z } from 'zod';
+
+import { resumeContainer } from '@/apps/container';
 import { AuthenticatedUser } from '@/modules/shared/application/authenticated-user';
 
-const { bulkApplyUseCase } = applyContainer;
+const recipientSchema = z.object({
+  email: z.string().email(),
+  name: z.string().trim().min(1).optional(),
+});
+
+const bulkApplySchema = z.object({
+  resumeId: z.string().uuid(),
+  recipients: z.array(recipientSchema).min(1),
+});
+
+const { bulkApplyUseCase } = resumeContainer;
 
 export const bulkApplyCommand = async (user: AuthenticatedUser, payload: unknown) => {
   const input = bulkApplySchema.parse(payload);

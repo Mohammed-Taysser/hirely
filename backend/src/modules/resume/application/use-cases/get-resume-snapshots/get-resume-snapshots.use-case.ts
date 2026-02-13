@@ -3,10 +3,10 @@ import {
   GetResumeSnapshotsResponseDto,
 } from './get-resume-snapshots.dto';
 
+import { IResumeQueryRepository } from '@/modules/resume/application/repositories/resume.query.repository.interface';
 import { UnexpectedError } from '@/modules/shared/application/app-error';
 import { UseCase } from '@/modules/shared/application/use-case.interface';
 import { Result } from '@/modules/shared/domain';
-import { IResumeQueryRepository } from '@/modules/resume/application/repositories/resume.query.repository.interface';
 
 type GetResumeSnapshotsResponse = Result<GetResumeSnapshotsResponseDto, UnexpectedError>;
 

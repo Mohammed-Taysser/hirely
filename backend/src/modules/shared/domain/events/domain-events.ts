@@ -4,6 +4,7 @@ import { IDomainEvent } from './domain-event.interface';
 export class DomainEvents {
   private static handlersMap: Map<string, ((event: IDomainEvent) => Promise<void>)[]> = new Map();
   private static markedAggregates: AggregateRoot<unknown>[] = [];
+  private static errorHandler?: (error: unknown, event: IDomainEvent) => Promise<void> | void;
 
   /**
    * Called by the Aggregate Root to signal that it has events ready to be published.
@@ -61,6 +62,16 @@ export class DomainEvents {
     this.markedAggregates = [];
   }
 
+  /**
+   * Optionally handle errors thrown by domain event handlers.
+   * Useful for logging without coupling domain to infrastructure.
+   */
+  public static setErrorHandler(
+    handler?: (error: unknown, event: IDomainEvent) => Promise<void> | void
+  ): void {
+    this.errorHandler = handler;
+  }
+
   private static findMarkedAggregateByID(id: string): AggregateRoot<unknown> | null {
     return this.markedAggregates.find((a) => a.id === id) || null;
   }
@@ -84,7 +95,9 @@ export class DomainEvents {
       try {
         await handler(event);
       } catch (err) {
-        console.error(`[DomainEvents]: Error handling ${eventClassName}`, err);
+        if (this.errorHandler) {
+          await this.errorHandler(err, event);
+        }
       }
     }
   }

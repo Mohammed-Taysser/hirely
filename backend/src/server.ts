@@ -9,20 +9,23 @@ import YAML from 'yamljs';
 
 import { BODY_LIMIT, RATE_LIMITS } from './apps/constant';
 import rateLimiter from './middleware/rate-limit.middleware';
-import errorService from './modules/shared/services/error.service';
-import loggerService from './modules/shared/services/logger.service';
+import loggerService from './modules/shared/infrastructure/services/logger.service';
+import errorService from './modules/shared/presentation/error.service';
 
 import CONFIG from '@/apps/config';
+import { registerApiRoutes } from '@/apps/routes';
 import errorHandlerMiddleware from '@/middleware/error-handler.middleware';
-import authRoutes from '@/modules/auth/auth.route';
-import planRoutes from '@/modules/plan/plan.route';
-import resumeRoutes from '@/modules/resume/resume.route';
-import resumeTemplateRoutes from '@/modules/resumeTemplate/resumeTemplate.route';
-import systemRoutes from '@/modules/system/system.route';
-import userRoutes from '@/modules/user/user.route';
-import '@/modules/user/user.subscriptions';
+import { DomainEvents } from '@/modules/shared/domain/events/domain-events';
+import { registerUserSubscriptions } from '@/modules/user/infrastructure/subscriptions/subscriptions.bootstrap';
 
 const app = express();
+registerUserSubscriptions();
+
+DomainEvents.setErrorHandler((error, event) => {
+  loggerService.error(`[DomainEvents]: Error handling ${event.constructor.name}`, {
+    error,
+  });
+});
 
 if (CONFIG.NODE_ENV !== 'test') {
   app.use(morgan('dev'));
@@ -70,12 +73,7 @@ app.use(express.json({ limit: BODY_LIMIT }));
 app.set('query parser', (str: string) => qs.parse(str));
 
 // Routes
-app.use('/api/', systemRoutes);
-app.use('/api/auth', authRoutes);
-app.use('/api/plans', planRoutes);
-app.use('/api/resume-templates', resumeTemplateRoutes);
-app.use('/api/resumes', resumeRoutes);
-app.use('/api/users', userRoutes);
+registerApiRoutes(app);
 
 // 404 Handler
 app.use((_req, _res, next) => {

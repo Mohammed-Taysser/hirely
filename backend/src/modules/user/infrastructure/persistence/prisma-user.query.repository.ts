@@ -1,14 +1,15 @@
 import { Prisma } from '@generated-prisma';
 
-import userSelect from '@/modules/shared/prisma-select/user.select';
 import prisma from '@/apps/prisma';
+import { toDateTimeFilter } from '@/modules/shared/infrastructure/prisma/filters';
+import userSelect from '@/modules/shared/infrastructure/prisma-select/user.select';
 import {
+  UserAuthDto,
   IUserQueryRepository,
   UserBasicDto,
   UserFullDto,
   UserQueryFilters,
 } from '@/modules/user/application/repositories/user.query.repository.interface';
-import { toDateTimeFilter } from '@/modules/shared/infra/prisma/filters';
 
 const buildUserFilters = (filters: UserQueryFilters): Prisma.UserWhereInput => {
   const where: Prisma.UserWhereInput = {};
@@ -53,6 +54,29 @@ export class PrismaUserQueryRepository implements IUserQueryRepository {
   async getBasicUsers(filters: UserQueryFilters): Promise<UserBasicDto[]> {
     const where = buildUserFilters(filters);
     return prisma.user.findMany({ select: userSelect.basic, where });
+  }
+
+  async findAuthByEmail(email: string): Promise<UserAuthDto | null> {
+    return prisma.user
+      .findUnique({
+        where: { email },
+        select: {
+          id: true,
+          email: true,
+          password: true,
+        },
+      })
+      .then((user) => {
+        if (!user) {
+          return null;
+        }
+
+        return {
+          id: user.id,
+          email: user.email,
+          passwordHash: user.password,
+        };
+      });
   }
 
   async findById(id: string): Promise<UserFullDto | null> {

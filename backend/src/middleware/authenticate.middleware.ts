@@ -1,11 +1,11 @@
 import { NextFunction, Request, Response } from 'express';
 
-import errorService from '@/modules/shared/services/error.service';
-import tokenService from '@/modules/shared/services/token.service';
-import { UserTokenPayload } from '@/modules/shared/application/services/token.service.interface';
-import { TypedAuthenticatedRequest } from '@/modules/shared/types/import';
 import { userContainer } from '@/apps/container';
 import { NotFoundError } from '@/modules/shared/application/app-error';
+import { UserTokenPayload } from '@/modules/shared/application/services/token.service.interface';
+import tokenService from '@/modules/shared/infrastructure/services/token.service';
+import errorService from '@/modules/shared/presentation/error.service';
+import { TypedAuthenticatedRequest } from '@/modules/shared/presentation/import';
 
 const { getUserByIdQueryUseCase } = userContainer;
 

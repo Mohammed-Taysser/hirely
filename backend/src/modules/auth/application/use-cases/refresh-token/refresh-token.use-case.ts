@@ -20,7 +20,11 @@ export class RefreshTokenUseCase implements UseCase<RefreshTokenRequestDto, Refr
       const refreshToken = this.tokenService.signRefreshToken(payload);
 
       return Result.ok({ accessToken, refreshToken });
-    } catch (err) {
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        return Result.fail(new ValidationError('Invalid or expired refresh token'));
+      }
+
       return Result.fail(new ValidationError('Invalid or expired refresh token'));
     }
   }

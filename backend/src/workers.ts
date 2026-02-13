@@ -1,12 +1,19 @@
 import 'dotenv/config';
-import { startPdfWorker } from './jobs/workers/pdf.worker';
 import { startEmailWorker } from './jobs/workers/email.worker';
+import { startPdfWorker } from './jobs/workers/pdf.worker';
 import { startPlanWorker } from './jobs/workers/plan.worker';
+import { DomainEvents } from './modules/shared/domain/events/domain-events';
 import { logger } from './shared/logger';
 
 const pdfWorker = startPdfWorker();
 const emailWorker = startEmailWorker();
 const planWorker = startPlanWorker();
+
+DomainEvents.setErrorHandler((error, event) => {
+  logger.error(`[DomainEvents]: Error handling ${event.constructor.name}`, {
+    error,
+  });
+});
 
 const shutdown = async () => {
   logger.info('Shutting down workers');

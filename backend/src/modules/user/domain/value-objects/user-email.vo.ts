@@ -1,5 +1,3 @@
-import { z } from 'zod';
-
 import { Result, ValueObject } from '@/modules/shared/domain';
 
 type UserEmailProps = {
@@ -16,13 +14,13 @@ export class UserEmail extends ValueObject<UserEmailProps> {
   }
 
   public static create(email: string): Result<UserEmail> {
-    const schema = z.email();
-    const result = schema.safeParse(email);
+    const value = email.trim();
+    const emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
 
-    if (!result.success) {
+    if (!emailRegex.test(value)) {
       return Result.fail('Email address is invalid');
     }
 
-    return Result.ok(new UserEmail({ value: result.data }));
+    return Result.ok(new UserEmail({ value }));
   }
 }

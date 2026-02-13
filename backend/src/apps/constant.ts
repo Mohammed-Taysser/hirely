@@ -1,7 +1,21 @@
-const BODY_LIMIT: string | number = '300kb';
+export type RateLimitKeys =
+  | 'EXPORT'
+  | 'BULK_APPLY'
+  | 'LOGIN'
+  | 'REGISTER'
+  | 'REFRESH_TOKEN'
+  | 'RESET_PASSWORD'
+  | 'CHANGE_PASSWORD'
+  | 'CHANGE_EMAIL'
+  | 'GENERAL';
 
-const EXPORT_EXPIRY_DAYS_FREE = 30;
-const EXPORT_EXPIRY_DAYS_PAID = 90;
+export interface RateLimitConfig {
+  windowSeconds: number;
+  max: number;
+  keyTemplate: string;
+}
+
+const BODY_LIMIT: string | number = '300kb';
 
 // Map of endpoints or actions to their limits
 const RATE_LIMITS: Record<RateLimitKeys, RateLimitConfig> = {
@@ -33,7 +47,7 @@ const RATE_LIMITS: Record<RateLimitKeys, RateLimitConfig> = {
     max: 5,
     keyTemplate: 'redis:rate-limit:change-email:user:{userId}',
   },
-  GENERAL: { windowSeconds: 60, max: 500, keyTemplate: 'redis:rate-limit:ip:{req.ip}' },
+  GENERAL: { windowSeconds: 60, max: 500, keyTemplate: 'redis:rate-limit:ip:{ip}' },
 };
 
 const QUEUE_NAMES = {
@@ -42,4 +56,4 @@ const QUEUE_NAMES = {
   planChanges: 'plan-changes',
 };
 
-export { BODY_LIMIT, EXPORT_EXPIRY_DAYS_FREE, EXPORT_EXPIRY_DAYS_PAID, QUEUE_NAMES, RATE_LIMITS };
+export { BODY_LIMIT, QUEUE_NAMES, RATE_LIMITS };
