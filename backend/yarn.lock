@@ -592,7 +592,7 @@
 "@hirely/resume-templates@file:../packages/resume-templates":
   version "0.1.0"
   dependencies:
-    "@hirely/resume-core" "file:../../../../../../home/dev/.cache/yarn/v6/npm-@hirely-resume-templates-0.1.0-ae1f7d0a-a299-4002-8636-bfdcda2d51e6-1769695645833/node_modules/@hirely/resume-core"
+    "@hirely/resume-core" "file:../../../../../../home/dev/.cache/yarn/v6/npm-@hirely-resume-templates-0.1.0-19f0b159-be21-4f1e-8922-795fa1671e45-1771023422297/node_modules/@hirely/resume-core"
 
 "@hono/node-server@1.19.6":
   version "1.19.6"
@@ -1583,7 +1583,7 @@
 
 "@types/jest@^30.0.0":
   version "30.0.0"
-  resolved "https://registry.npmjs.org/@types/jest/-/jest-30.0.0.tgz"
+  resolved "https://registry.yarnpkg.com/@types/jest/-/jest-30.0.0.tgz#5e85ae568006712e4ad66f25433e9bdac8801f1d"
   integrity sha512-XTYugzhuwqWjws0CVz8QpM36+T+Dz5mTEBKhNs/esGLnCIlGdRy+Dq78NRjd7ls7r8BC8ZRMOrKlkO1hU0JOwA==
   dependencies:
     expect "^30.0.0"

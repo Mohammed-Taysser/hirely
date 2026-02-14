@@ -1,3 +1,4 @@
+import { getTemplateById } from '@hirely/resume-templates';
 import { z } from 'zod';
 
 import CONFIG from '@/apps/config';
@@ -46,6 +47,15 @@ const resumeDataSchema = z
   })
   .refine((data) => !exceedsResumeSectionsLimit(data.sections, CONFIG.MAX_RESUME_SECTIONS), {
     message: buildResumeSectionsLimitErrorMessage(CONFIG.MAX_RESUME_SECTIONS),
+  });
+
+const templateIdSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(100)
+  .refine((templateId) => Boolean(getTemplateById(templateId)), {
+    message: 'Invalid templateId',
   });
 
 const getResumesListSchema = {
@@ -105,7 +115,7 @@ const createResumeSchema = {
   body: z.object({
     name: z.string().trim().min(1).max(200),
     data: resumeDataSchema,
-    templateId: z.string().trim().min(1).max(100).default('classic'),
+    templateId: templateIdSchema.default('classic'),
     templateVersion: z.string().trim().max(50).optional(),
     themeConfig: z.record(z.string(), z.any()).optional(),
   }),
@@ -117,7 +127,7 @@ const updateResumeSchema = {
     .object({
       name: z.string().trim().min(1).max(200).optional(),
       data: resumeDataSchema.optional(),
-      templateId: z.string().trim().min(1).max(100).optional(),
+      templateId: templateIdSchema.optional(),
       templateVersion: z.string().trim().max(50).optional(),
       themeConfig: z.record(z.string(), z.any()).optional(),
     })

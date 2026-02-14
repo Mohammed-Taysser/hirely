@@ -6,28 +6,35 @@ import pino from 'pino';
 import CONFIG from '@/apps/config';
 
 const logsDir = path.resolve(process.cwd(), 'logs');
+const isTestEnvironment = CONFIG.NODE_ENV === 'test';
 
 if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir);
 
+let transport: pino.LoggerOptions['transport'];
+if (!isTestEnvironment) {
+  if (CONFIG.NODE_ENV === 'production') {
+    transport = {
+      target: 'pino/file',
+      options: {
+        destination: './logs/app.log',
+      },
+    };
+  } else {
+    transport = {
+      target: 'pino-pretty',
+      options: {
+        colorize: true,
+        translateTime: 'SYS:standard',
+        ignore: 'pid,hostname',
+      },
+    };
+  }
+}
+
 const logger = pino({
   // name: options.name,
-  level: 'info',
-  transport:
-    CONFIG.NODE_ENV === 'production'
-      ? {
-          target: 'pino/file',
-          options: {
-            destination: './logs/app.log',
-          },
-        }
-      : {
-          target: 'pino-pretty',
-          options: {
-            colorize: true,
-            translateTime: 'SYS:standard',
-            ignore: 'pid,hostname',
-          },
-        },
+  level: isTestEnvironment ? 'silent' : 'info',
+  transport,
 });
 
 class LoggerService {

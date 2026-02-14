@@ -7,6 +7,10 @@ import {
   buildResumeSectionsLimitErrorMessage,
   exceedsResumeSectionsLimit,
 } from '@/modules/resume/application/policies/resume-sections.policy';
+import {
+  buildMissingRequiredSectionsErrorMessage,
+  getMissingRequiredSections,
+} from '@/modules/resume/application/policies/resume-template-sections.policy';
 import { IResumeSnapshotRepository } from '@/modules/resume/application/repositories/resume-snapshot.repository.interface';
 import { IResumeQueryRepository } from '@/modules/resume/application/repositories/resume.query.repository.interface';
 import { IResumeRepository } from '@/modules/resume/domain/repositories/resume.repository.interface';
@@ -64,6 +68,15 @@ export class UpdateResumeUseCase implements UseCase<UpdateResumeRequestDto, Upda
 
       if (request.templateId) {
         resume.changeTemplate(request.templateId, request.templateVersion);
+      }
+
+      const missingRequiredSections = getMissingRequiredSections(resume.templateId, resume.data);
+      if (missingRequiredSections.length > 0) {
+        return Result.fail(
+          new ValidationError(
+            buildMissingRequiredSectionsErrorMessage(resume.templateId, missingRequiredSections)
+          )
+        );
       }
 
       if (request.themeConfig) {

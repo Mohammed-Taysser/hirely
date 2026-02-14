@@ -83,20 +83,26 @@ app.use((_req, _res, next) => {
 // Global Error Handler (last)
 app.use(errorHandlerMiddleware);
 
-app.listen(CONFIG.PORT, () => {
-  const localUrl = `http://localhost:${CONFIG.PORT}/`;
-  const docsUrl = `http://localhost:${CONFIG.PORT}/docs`;
-  const healthUrl = `http://localhost:${CONFIG.PORT}/health`;
+const startServer = () =>
+  app.listen(CONFIG.PORT, () => {
+    const localUrl = `http://localhost:${CONFIG.PORT}/`;
+    const docsUrl = `http://localhost:${CONFIG.PORT}/docs`;
+    const healthUrl = `http://localhost:${CONFIG.PORT}/health`;
 
-  loggerService.info('➜  Node:     ' + process.version);
+    loggerService.info('➜  Node:     ' + process.version);
 
-  loggerService.info(`➜  ENV:      ${CONFIG.NODE_ENV.toUpperCase()}`);
-  loggerService.info();
+    loggerService.info(`➜  ENV:      ${CONFIG.NODE_ENV.toUpperCase()}`);
+    loggerService.info();
 
-  loggerService.info('➜' + '  Local:   ' + localUrl);
-  loggerService.info('➜' + '  Docs:    ' + docsUrl);
-  loggerService.info('➜' + '  Health:  ' + healthUrl);
-  loggerService.info('💡 Tip: ' + 'Press Ctrl+C to stop the server.' + '\n');
-});
+    loggerService.info('➜' + '  Local:   ' + localUrl);
+    loggerService.info('➜' + '  Docs:    ' + docsUrl);
+    loggerService.info('➜' + '  Health:  ' + healthUrl);
+    loggerService.info('💡 Tip: ' + 'Press Ctrl+C to stop the server.' + '\n');
+  });
+
+if (CONFIG.NODE_ENV !== 'test') {
+  startServer();
+}
 
 export default app;
+export { startServer };

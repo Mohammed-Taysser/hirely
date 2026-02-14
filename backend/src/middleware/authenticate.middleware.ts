@@ -1,13 +1,17 @@
 import { NextFunction, Request, Response } from 'express';
 
-import { userContainer } from '@/apps/container';
 import { NotFoundError } from '@/modules/shared/application/app-error';
 import { UserTokenPayload } from '@/modules/shared/application/services/token.service.interface';
 import tokenService from '@/modules/shared/infrastructure/services/token.service';
 import errorService from '@/modules/shared/presentation/error.service';
 import { TypedAuthenticatedRequest } from '@/modules/shared/presentation/import';
 
-const { getUserByIdQueryUseCase } = userContainer;
+const resolveGetUserByIdQueryUseCase = async () => {
+  // Keep it lazy to avoid bootstrapping app container for unauthenticated requests.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { userContainer } = require('../apps/container');
+  return userContainer.getUserByIdQueryUseCase;
+};
 
 async function authenticateMiddleware(req: Request, _res: Response, next: NextFunction) {
   try {
@@ -39,6 +43,7 @@ async function authenticateMiddleware(req: Request, _res: Response, next: NextFu
     }
 
     // Fetch only required user details (minimal)
+    const getUserByIdQueryUseCase = await resolveGetUserByIdQueryUseCase();
     const userResult = await getUserByIdQueryUseCase.execute({ userId: decoded.id });
     if (userResult.isFailure) {
       if (userResult.error instanceof NotFoundError) {

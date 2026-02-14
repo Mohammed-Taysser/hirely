@@ -13,6 +13,10 @@ import {
   exceedsResumeSectionsLimit,
 } from '@/modules/resume/application/policies/resume-sections.policy';
 import {
+  buildMissingRequiredSectionsErrorMessage,
+  getMissingRequiredSections,
+} from '@/modules/resume/application/policies/resume-template-sections.policy';
+import {
   IResumeQueryRepository,
   ResumeFullDto,
 } from '@/modules/resume/application/repositories/resume.query.repository.interface';
@@ -64,6 +68,15 @@ export class CreateResumeUseCase implements UseCase<CreateResumeRequestDto, Crea
       if (exceedsResumeSectionsLimit(request.data.sections, this.maxResumeSections)) {
         return Result.fail(
           new ValidationError(buildResumeSectionsLimitErrorMessage(this.maxResumeSections))
+        );
+      }
+
+      const missingRequiredSections = getMissingRequiredSections(request.templateId, request.data);
+      if (missingRequiredSections.length > 0) {
+        return Result.fail(
+          new ValidationError(
+            buildMissingRequiredSectionsErrorMessage(request.templateId, missingRequiredSections)
+          )
         );
       }
 
