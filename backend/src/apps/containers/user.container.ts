@@ -1,11 +1,13 @@
 import {
   auditLogService,
+  billingService,
   planLimitQueryRepository,
   passwordHasherService,
   planQueryRepository,
   resumeExportRepository,
   resumeQueryRepository,
   systemLogService,
+  systemLogQueryRepository,
   userQueryRepository,
   userRepository,
 } from '@/apps/container.shared';
@@ -44,6 +46,7 @@ const changeUserPlanUseCase = new ChangeUserPlanUseCase(
   userRepository,
   userQueryRepository,
   planQueryRepository,
+  billingService,
   systemLogService,
   auditLogService
 );
@@ -52,7 +55,8 @@ const getUserPlanUsageUseCase = new GetUserPlanUsageUseCase(
   userQueryRepository,
   planLimitQueryRepository,
   resumeQueryRepository,
-  resumeExportRepository
+  resumeExportRepository,
+  systemLogQueryRepository
 );
 
 const userContainer = {

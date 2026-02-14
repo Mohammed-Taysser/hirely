@@ -1,0 +1,39 @@
+name: Package Release Notes
+
+on:
+  push:
+    tags:
+      - 'resume-core-v*'
+      - 'resume-templates-v*'
+
+jobs:
+  release-notes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build package changelog
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: node .github/scripts/generate-package-changelog.mjs > package_changelog.md
+
+      - name: Create or update release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          if gh release view "$TAG_NAME" > /dev/null 2>&1; then
+            gh release edit "$TAG_NAME" --notes-file package_changelog.md
+          else
+            gh release create "$TAG_NAME" --title "$TAG_NAME" --notes-file package_changelog.md
+          fi

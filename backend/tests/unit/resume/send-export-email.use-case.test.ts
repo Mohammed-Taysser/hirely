@@ -1,5 +1,6 @@
 import { SendExportEmailUseCase } from '@dist/modules/resume/application/use-cases/send-export-email/send-export-email.use-case';
 import {
+  ForbiddenError,
   NotFoundError,
   UnexpectedError,
 } from '@dist/modules/shared/application/app-error';
@@ -16,6 +17,28 @@ describe('SendExportEmailUseCase', () => {
   const makeDeps = () => ({
     exportEmailService: { sendEmail: jest.fn().mockResolvedValue(undefined) },
     auditLogService: { log: jest.fn().mockResolvedValue(undefined) },
+    planLimitQueryRepository: {
+      findByPlanId: jest.fn().mockResolvedValue({
+        id: 'limit-1',
+        planId: 'plan-1',
+        maxResumes: 10,
+        maxExports: 100,
+        dailyUploadMb: 500,
+        dailyExports: 50,
+        dailyExportEmails: 50,
+        dailyBulkApplies: 20,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
+    },
+    systemLogQueryRepository: {
+      countByUserAndActionInRange: jest.fn().mockResolvedValue(0),
+      getActionCounts: jest.fn(),
+      getActionCountsByReason: jest.fn(),
+      hasActionSince: jest.fn(),
+      findFailedExportEmailJobs: jest.fn(),
+      findFailedExportEmailJobById: jest.fn(),
+    },
     resumeExportQueryRepository: {
       findById: jest.fn().mockResolvedValue({
         id: 'export-1',
@@ -26,7 +49,11 @@ describe('SendExportEmailUseCase', () => {
       getLatestForResume: jest.fn(),
     },
     userQueryRepository: {
-      findById: jest.fn().mockResolvedValue({ id: 'user-1', email: 'owner@example.com' }),
+      findById: jest.fn().mockResolvedValue({
+        id: 'user-1',
+        email: 'owner@example.com',
+        planId: 'plan-1',
+      }),
       findByEmail: jest.fn(),
       findAuthByEmail: jest.fn(),
       getPaginatedUsers: jest.fn(),
@@ -39,16 +66,21 @@ describe('SendExportEmailUseCase', () => {
     activityService: { log: jest.fn().mockResolvedValue(undefined) },
   });
 
+  const buildUseCase = (deps: ReturnType<typeof makeDeps>) =>
+    new SendExportEmailUseCase(
+      deps.exportEmailService,
+      deps.auditLogService,
+      deps.planLimitQueryRepository,
+      deps.systemLogQueryRepository,
+      deps.resumeExportQueryRepository,
+      deps.userQueryRepository,
+      deps.storageService,
+      deps.activityService
+    );
+
   it('sends export email when export is ready', async () => {
     const d = makeDeps();
-    const useCase = new SendExportEmailUseCase(
-      d.exportEmailService,
-      d.auditLogService,
-      d.resumeExportQueryRepository,
-      d.userQueryRepository,
-      d.storageService,
-      d.activityService
-    );
+    const useCase = buildUseCase(d);
 
     const result = await useCase.execute(request);
 
@@ -66,14 +98,7 @@ describe('SendExportEmailUseCase', () => {
       url: null,
     });
 
-    const useCase = new SendExportEmailUseCase(
-      d.exportEmailService,
-      d.auditLogService,
-      d.resumeExportQueryRepository,
-      d.userQueryRepository,
-      d.storageService,
-      d.activityService
-    );
+    const useCase = buildUseCase(d);
 
     const result = await useCase.execute(request);
 
@@ -89,14 +114,7 @@ describe('SendExportEmailUseCase', () => {
       url: 'exports/file.pdf',
     });
 
-    const useCase = new SendExportEmailUseCase(
-      d.exportEmailService,
-      d.auditLogService,
-      d.resumeExportQueryRepository,
-      d.userQueryRepository,
-      d.storageService,
-      d.activityService
-    );
+    const useCase = buildUseCase(d);
 
     const result = await useCase.execute(request);
 
@@ -112,14 +130,7 @@ describe('SendExportEmailUseCase', () => {
       url: null,
     });
 
-    const useCase = new SendExportEmailUseCase(
-      d.exportEmailService,
-      d.auditLogService,
-      d.resumeExportQueryRepository,
-      d.userQueryRepository,
-      d.storageService,
-      d.activityService
-    );
+    const useCase = buildUseCase(d);
 
     const result = await useCase.execute(request);
 
@@ -131,14 +142,7 @@ describe('SendExportEmailUseCase', () => {
     const d = makeDeps();
     d.resumeExportQueryRepository.findById.mockResolvedValue(null);
 
-    const useCase = new SendExportEmailUseCase(
-      d.exportEmailService,
-      d.auditLogService,
-      d.resumeExportQueryRepository,
-      d.userQueryRepository,
-      d.storageService,
-      d.activityService
-    );
+    const useCase = buildUseCase(d);
 
     const result = await useCase.execute(request);
 
@@ -150,14 +154,7 @@ describe('SendExportEmailUseCase', () => {
     const d = makeDeps();
     d.userQueryRepository.findById.mockResolvedValue(null);
 
-    const useCase = new SendExportEmailUseCase(
-      d.exportEmailService,
-      d.auditLogService,
-      d.resumeExportQueryRepository,
-      d.userQueryRepository,
-      d.storageService,
-      d.activityService
-    );
+    const useCase = buildUseCase(d);
 
     const result = await useCase.execute(request);
 
@@ -169,14 +166,7 @@ describe('SendExportEmailUseCase', () => {
     const d = makeDeps();
     d.storageService.getSignedDownloadUrl.mockResolvedValue('');
 
-    const useCase = new SendExportEmailUseCase(
-      d.exportEmailService,
-      d.auditLogService,
-      d.resumeExportQueryRepository,
-      d.userQueryRepository,
-      d.storageService,
-      d.activityService
-    );
+    const useCase = buildUseCase(d);
 
     const result = await useCase.execute(request);
 
@@ -188,14 +178,7 @@ describe('SendExportEmailUseCase', () => {
     const d = makeDeps();
     d.storageService.getSignedDownloadUrl.mockResolvedValue('file:///tmp/export.pdf');
 
-    const useCase = new SendExportEmailUseCase(
-      d.exportEmailService,
-      d.auditLogService,
-      d.resumeExportQueryRepository,
-      d.userQueryRepository,
-      d.storageService,
-      d.activityService
-    );
+    const useCase = buildUseCase(d);
 
     const result = await useCase.execute(request);
 
@@ -212,14 +195,7 @@ describe('SendExportEmailUseCase', () => {
     const d = makeDeps();
     d.storageService.getSignedDownloadUrl.mockRejectedValue(new Error('boom'));
 
-    const useCase = new SendExportEmailUseCase(
-      d.exportEmailService,
-      d.auditLogService,
-      d.resumeExportQueryRepository,
-      d.userQueryRepository,
-      d.storageService,
-      d.activityService
-    );
+    const useCase = buildUseCase(d);
 
     const result = await useCase.execute(request);
 
@@ -231,14 +207,7 @@ describe('SendExportEmailUseCase', () => {
     const d = makeDeps();
     d.exportEmailService.sendEmail.mockRejectedValue('boom');
 
-    const useCase = new SendExportEmailUseCase(
-      d.exportEmailService,
-      d.auditLogService,
-      d.resumeExportQueryRepository,
-      d.userQueryRepository,
-      d.storageService,
-      d.activityService
-    );
+    const useCase = buildUseCase(d);
 
     const result = await useCase.execute(request);
 
@@ -252,5 +221,17 @@ describe('SendExportEmailUseCase', () => {
         }),
       })
     );
+  });
+
+  it('returns forbidden when daily email limit is reached', async () => {
+    const d = makeDeps();
+    d.systemLogQueryRepository.countByUserAndActionInRange.mockResolvedValue(50);
+
+    const useCase = buildUseCase(d);
+    const result = await useCase.execute(request);
+
+    expect(result.isFailure).toBe(true);
+    expect(result.error).toBeInstanceOf(ForbiddenError);
+    expect(d.exportEmailService.sendEmail).not.toHaveBeenCalled();
   });
 });

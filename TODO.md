@@ -30,10 +30,47 @@
   - `POST /api/resumes/exports/:exportId/retry` for failed PDF exports
   - `POST /api/resumes/exports/failed-emails/:jobId/retry` for failed email jobs
   - Guardrails: ownership + status checks + retry rate limiting
+- Export ops metrics split by reason:
+  - `GET /api/metrics/export-ops` includes `counters.emailByReason`
+  - buckets: `freeTierExport` and `bulkApply` with `sent` and `failed`
+- Billing provider integration + cycle-aware downgrade scheduling:
+  - Configurable provider strategy (`mock` / `none`)
+  - Auto-schedule downgrades at cycle end when `scheduleAt` is omitted
+  - Explicit `scheduleAt` still supported for user-driven scheduling
+- Per-feature daily limits:
+  - Added canonical `dailyBulkApplies` in plan limits
+  - Enforced in bulk-apply flow using daily `systemLog` counts
+  - Exposed in `GET /api/users/me/plan-usage` limits/usage/remaining
+- Resume template package semantic versioning workflow:
+  - Added CI guard to require package version bumps when package source changes
+  - Added local semver check script and release doc
+- Billing webhook ingestion:
+  - Added `POST /api/billing/webhooks/events` with provider-specific signature verification
+  - Handles `subscription.renewed`, `subscription.canceled`, and `subscription.past_due`
+  - Writes system/audit logs and applies/schedules plan change when applicable
+  - Added replay protection via persisted webhook event records (`provider` + `eventId`)
+  - Added billing event persistence for idempotency and forensic traceability
+- Fine-grained per-feature daily limits:
+  - Added plan limits: `dailyExports`, `dailyExportEmails`
+  - Enforced `dailyExports` in `ExportService.enforceExportLimit`
+  - Enforced `dailyExportEmails` in `SendExportEmailUseCase`
+  - Exposed in `GET /api/users/me/plan-usage` limits/usage/remaining
+- Package publish automation:
+  - Added tag-driven GitHub Actions workflow to publish `@hirely/resume-core` and
+    `@hirely/resume-templates`
+  - Added release-tag instructions and `NPM_TOKEN` requirement docs
+  - Added PR publish dry-run workflow for package build + publish validation
+- Billing webhook verification hardening:
+  - Added SDK-aware verification for Stripe/Paddle with HMAC fallback
+  - Kept provider-specific header handling + tolerance checks
+- Billing webhook dead-letter + replay:
+  - Added failed webhook listing endpoint for authenticated users
+  - Added replay endpoint for failed webhook events
+  - Added persisted webhook event state transitions (`PROCESSING/PROCESSED/IGNORED/FAILED`)
+  - Added replay audit/system log actions
+- Package changelog + release notes:
+  - Added tag-based changelog generator script
+  - Added tag-triggered GitHub release notes workflow for package releases
 
-## Next (High Value)
-1. Add queue metrics split by reason (`free-tier-export` vs `bulk-apply`) for email failures/success.
-
-## Later
-- Billing provider integration and cycle-aware downgrade scheduling.
-- Per-feature daily limits (e.g., bulk-apply/day) via the canonical plan-limit policy.
+## Remaining From Current Core Plan
+- None.

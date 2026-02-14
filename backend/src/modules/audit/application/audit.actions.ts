@@ -5,6 +5,8 @@ export const AuditActions = {
   USER_PLAN_CHANGED: 'user.plan.changed',
   USER_PLAN_SCHEDULED: 'user.plan.scheduled',
   USER_PLAN_APPLIED: 'user.plan.applied',
+  BILLING_WEBHOOK_RECEIVED: 'billing.webhook.received',
+  BILLING_WEBHOOK_REPLAYED: 'billing.webhook.replayed',
 
   PLAN_CREATED: 'plan.created',
   PLAN_UPDATED: 'plan.updated',

@@ -25,6 +25,7 @@ Request:
 Rules:
 
 - Plan change is immediate when `scheduleAt` is omitted.
+- Exception: if omitted and the request is a downgrade, it is auto-scheduled for billing cycle end.
 - If `scheduleAt` is in the future, change is stored as `pendingPlanId` + `pendingPlanAt`.
 - Scheduled changes are applied by worker loop every `PLAN_CHANGE_INTERVAL_SECONDS`.
 - User can only change their own plan.
@@ -36,6 +37,9 @@ Each plan has one canonical limit row in `PlanLimit`:
 - `maxResumes`
 - `maxExports`
 - `dailyUploadMb`
+- `dailyExports`
+- `dailyExportEmails`
+- `dailyBulkApplies`
 
 Canonical DTO:
 
@@ -51,6 +55,10 @@ Key policy functions:
 - `hasReachedResumeLimit(...)`
 - `hasReachedExportLimit(...)`
 - `exceedsDailyUploadLimit(...)`
+- `hasReachedDailyBulkApplyLimit(...)`
+- `hasReachedDailyExportLimit(...)`
+- `hasReachedDailyExportEmailLimit(...)`
+- `classifyPlanChangeDirection(...)`
 
 ## 3. Centralized Enforcement Paths
 
@@ -75,6 +83,27 @@ Daily upload byte limit:
   - reads used bytes via `IResumeExportRepository.getUploadedBytesByUserInRange`
   - uses `exceedsDailyUploadLimit`
 
+Daily bulk-apply limit:
+
+- `BulkApplyUseCase`:
+  - reads plan limits via `findByPlanId`
+  - reads current UTC day usage from `SystemLog` action count
+  - uses `hasReachedDailyBulkApplyLimit`
+
+Daily export count limit:
+
+- `ExportService.enforceExportLimit`:
+  - reads plan limits via `findByPlanId`
+  - counts exports created in current UTC day
+  - uses `hasReachedDailyExportLimit`
+
+Daily export email limit:
+
+- `SendExportEmailUseCase`:
+  - reads plan limits via `findByPlanId`
+  - counts sent emails in current UTC day via `SystemLog` action count
+  - uses `hasReachedDailyExportEmailLimit`
+
 ## 4. User Plan Usage Endpoint
 
 Endpoint:
@@ -85,8 +114,8 @@ Response includes:
 
 - Plan identity (`id`, `code`, `name`)
 - Limits (`maxResumes`, `maxExports`, `dailyUploadMb`, `dailyUploadBytes`)
-- Current usage (`resumesUsed`, `exportsUsed`, `dailyUploadUsedBytes`)
-- Remaining capacity (`resumes`, `exports`, `dailyUploadBytes`)
+- Current usage (`resumesUsed`, `exportsUsed`, `dailyUploadUsedBytes`, `dailyBulkAppliesUsed`)
+- Remaining capacity (`resumes`, `exports`, `dailyUploadBytes`, `dailyBulkApplies`)
 
 ## 5. Practical Examples
 
@@ -121,10 +150,12 @@ Main files:
 - `backend/src/modules/resume/application/services/export.service.ts`
 - `backend/src/modules/billing/infrastructure/services/billing.service.ts`
 - `backend/src/modules/user/application/use-cases/get-user-plan-usage/get-user-plan-usage.use-case.ts`
+- `backend/src/modules/resume/application/use-cases/bulk-apply/bulk-apply.use-case.ts`
+- `backend/src/modules/billing/infrastructure/services/mock-billing-provider.service.ts`
 
 ## 7. Future Enhancements
 
-- Add per-feature limits (e.g., bulk apply/day) using the same canonical policy path.
+- Add more per-feature daily limits (for example: export/day and email/day).
 
 ## 8. Export Enqueue Idempotency (New)
 
@@ -155,3 +186,27 @@ Rules:
 - Retry failed email: failed log must belong to user and include valid payload metadata.
 - Retry failed email requires export status `READY`.
 - Both endpoints are rate-limited.
+
+## 10. Billing Webhook Ingestion (New)
+
+Endpoint:
+
+- `POST /api/billing/webhooks/events`
+
+Security:
+
+- Requires provider-specific webhook signature headers.
+- Signatures are validated from raw request body.
+- Duplicate events are replay-safe using persisted billing webhook event records.
+
+Supported events:
+
+- `subscription.renewed`
+- `subscription.canceled`
+- `subscription.past_due`
+
+Behavior:
+
+- Renewal can apply plan immediately when `planCode` is supplied.
+- Cancellation can apply/schedule fallback plan when `fallbackPlanCode` is supplied.
+- Past-due currently records logs without mutating plan.

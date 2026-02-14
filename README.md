@@ -27,6 +27,7 @@ Docs:
 - `backend/docs/APP_OVERVIEW.md`
 - `backend/docs/EXPORT_OPERATIONS.md`
 - `backend/docs/PLAN_CHANGES.md`
+- `backend/docs/BILLING_PLAN_SCHEDULING.md`
 - `backend/docs/AUDIT_LOGS.md`
 - `backend/docs/ddd/domain-layer.md`
 - `backend/docs/ddd/application-layer.md`
@@ -99,6 +100,13 @@ Workers
 - `EXPORT_JOB_BACKOFF_MS`
 - `EXPORT_JOB_KEEP_COMPLETED`
 - `EXPORT_JOB_KEEP_FAILED`
+- `BILLING_PROVIDER`
+- `BILLING_CYCLE_DAYS`
+- `BILLING_DOWNGRADE_BEHAVIOR`
+- `BILLING_WEBHOOK_SECRET`
+- `BILLING_STRIPE_WEBHOOK_SECRET`
+- `BILLING_PADDLE_WEBHOOK_SECRET`
+- `BILLING_WEBHOOK_TOLERANCE_SECONDS`
 
 Optional:
 

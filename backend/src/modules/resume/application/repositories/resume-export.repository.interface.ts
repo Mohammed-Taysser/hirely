@@ -22,6 +22,7 @@ export interface IResumeExportRepository {
   markPending(exportId: string): Promise<ExportRecord>;
   markFailed(exportId: string, reason: string): Promise<ExportRecord>;
   countByUser(userId: string): Promise<number>;
+  countByUserInRange(userId: string, start: Date, end: Date): Promise<number>;
   getUploadedBytesByUserInRange(userId: string, start: Date, end: Date): Promise<number>;
   findExpired(now: Date, limit: number): Promise<ExpiredResumeExportRecord[]>;
   deleteByIds(ids: string[]): Promise<number>;

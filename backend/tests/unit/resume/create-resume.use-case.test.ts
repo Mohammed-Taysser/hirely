@@ -69,6 +69,9 @@ const buildDependencies = () => {
         maxResumes: number;
         maxExports: number;
         dailyUploadMb: number;
+        dailyExports: number;
+        dailyExportEmails: number;
+        dailyBulkApplies: number;
         createdAt: Date;
         updatedAt: Date;
       }> => ({
@@ -77,6 +80,9 @@ const buildDependencies = () => {
         maxResumes: 10,
         maxExports: 10,
         dailyUploadMb: 10,
+        dailyExports: 10,
+        dailyExportEmails: 20,
+        dailyBulkApplies: 10,
         createdAt: new Date(),
         updatedAt: new Date(),
       })

@@ -1,6 +1,7 @@
 import { IActivityService } from '@/modules/activity/application/services/activity.service.interface';
 import { IBillingService } from '@/modules/billing/application/services/billing.service.interface';
 import {
+  hasReachedDailyExportLimit,
   hasReachedExportLimit,
   requirePlanUsageLimits,
 } from '@/modules/plan/application/policies/plan-limit.policy';
@@ -28,6 +29,15 @@ import { ForbiddenError, NotFoundError } from '@/modules/shared/application/app-
 import { IUserQueryRepository } from '@/modules/user/application/repositories/user.query.repository.interface';
 
 const daysToMs = (days: number) => days * 24 * 60 * 60 * 1000;
+const getUtcDayRange = (now = new Date()) => {
+  const start = new Date(now);
+  start.setUTCHours(0, 0, 0, 0);
+
+  const end = new Date(now);
+  end.setUTCHours(23, 59, 59, 999);
+
+  return { start, end };
+};
 
 const buildStorageKey = (userId: string, exportId: string) => {
   const dateKey = new Date().toISOString().slice(0, 10);
@@ -77,6 +87,16 @@ export class ExportService implements IExportService {
     const exportCount = await this.resumeExportRepository.countByUser(userId);
     if (hasReachedExportLimit(exportCount, planUsageLimits.maxExports)) {
       throw new ForbiddenError('Export limit reached for your plan');
+    }
+
+    const { start, end } = getUtcDayRange();
+    const dailyExportCount = await this.resumeExportRepository.countByUserInRange(
+      userId,
+      start,
+      end
+    );
+    if (hasReachedDailyExportLimit(dailyExportCount, planUsageLimits.dailyExports)) {
+      throw new ForbiddenError('Daily export limit reached for your plan');
     }
   }
 

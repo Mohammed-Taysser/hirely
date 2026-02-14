@@ -7,6 +7,8 @@ import { IResumeQueryRepository } from '@/modules/resume/application/repositorie
 import { AppError, NotFoundError, UnexpectedError } from '@/modules/shared/application/app-error';
 import { UseCase } from '@/modules/shared/application/use-case.interface';
 import { Result } from '@/modules/shared/domain';
+import { ISystemLogQueryRepository } from '@/modules/system/application/repositories/system-log.query.repository.interface';
+import { SystemActions } from '@/modules/system/application/system.actions';
 import { IUserQueryRepository } from '@/modules/user/application/repositories/user.query.repository.interface';
 
 type GetUserPlanUsageResponse = Result<GetUserPlanUsageResponseDto, AppError>;
@@ -31,7 +33,8 @@ export class GetUserPlanUsageUseCase implements UseCase<
     private readonly userQueryRepository: IUserQueryRepository,
     private readonly planLimitQueryRepository: IPlanLimitQueryRepository,
     private readonly resumeQueryRepository: IResumeQueryRepository,
-    private readonly resumeExportRepository: IResumeExportRepository
+    private readonly resumeExportRepository: IResumeExportRepository,
+    private readonly systemLogQueryRepository: ISystemLogQueryRepository
   ) {}
 
   async execute(request: GetUserPlanUsageRequestDto): Promise<GetUserPlanUsageResponse> {
@@ -47,8 +50,25 @@ export class GetUserPlanUsageUseCase implements UseCase<
       const resumes = await this.resumeQueryRepository.getBasicResumes({ userId: request.userId });
       const exportsUsed = await this.resumeExportRepository.countByUser(request.userId);
       const { start, end } = getUtcDayRange();
+      const dailyExportsUsed = await this.resumeExportRepository.countByUserInRange(
+        request.userId,
+        start,
+        end
+      );
       const dailyUploadUsedBytes = await this.resumeExportRepository.getUploadedBytesByUserInRange(
         request.userId,
+        start,
+        end
+      );
+      const dailyExportEmailsUsed = await this.systemLogQueryRepository.countByUserAndActionInRange(
+        request.userId,
+        SystemActions.EXPORT_EMAIL_SENT,
+        start,
+        end
+      );
+      const dailyBulkAppliesUsed = await this.systemLogQueryRepository.countByUserAndActionInRange(
+        request.userId,
+        SystemActions.BULK_APPLY_ENQUEUED,
         start,
         end
       );
@@ -66,16 +86,25 @@ export class GetUserPlanUsageUseCase implements UseCase<
           maxExports: usageLimits.maxExports,
           dailyUploadMb: usageLimits.dailyUploadMb,
           dailyUploadBytes: usageLimits.dailyUploadBytes,
+          dailyExports: usageLimits.dailyExports,
+          dailyExportEmails: usageLimits.dailyExportEmails,
+          dailyBulkApplies: usageLimits.dailyBulkApplies,
         },
         usage: {
           resumesUsed,
           exportsUsed,
+          dailyExportsUsed,
           dailyUploadUsedBytes,
+          dailyExportEmailsUsed,
+          dailyBulkAppliesUsed,
         },
         remaining: {
           resumes: clampToZero(usageLimits.maxResumes - resumesUsed),
           exports: clampToZero(usageLimits.maxExports - exportsUsed),
+          dailyExports: clampToZero(usageLimits.dailyExports - dailyExportsUsed),
           dailyUploadBytes: clampToZero(usageLimits.dailyUploadBytes - dailyUploadUsedBytes),
+          dailyExportEmails: clampToZero(usageLimits.dailyExportEmails - dailyExportEmailsUsed),
+          dailyBulkApplies: clampToZero(usageLimits.dailyBulkApplies - dailyBulkAppliesUsed),
         },
       });
     } catch (error) {

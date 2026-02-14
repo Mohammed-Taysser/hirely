@@ -108,6 +108,15 @@ const envSchema = z
       .optional()
       .transform((value) => value?.toLowerCase() === 'true')
       .default(false),
+
+    // Billing behavior
+    BILLING_PROVIDER: z.enum(['none', 'mock']).default('mock'),
+    BILLING_CYCLE_DAYS: z.coerce.number().int().positive().default(30),
+    BILLING_DOWNGRADE_BEHAVIOR: z.enum(['immediate', 'cycle_end']).default('cycle_end'),
+    BILLING_WEBHOOK_SECRET: z.string().trim().default(''),
+    BILLING_STRIPE_WEBHOOK_SECRET: z.string().trim().default(''),
+    BILLING_PADDLE_WEBHOOK_SECRET: z.string().trim().default(''),
+    BILLING_WEBHOOK_TOLERANCE_SECONDS: z.coerce.number().int().positive().default(300),
   })
   .superRefine((data, ctx) => {
     const missingSmtpField =
@@ -132,6 +141,23 @@ const envSchema = z
             'S3_BUCKET, S3_REGION, S3_ACCESS_KEY_ID, and S3_SECRET_ACCESS_KEY are required when EXPORT_STORAGE_DRIVER=s3.',
         });
       }
+    }
+
+    const noWebhookSecretConfigured =
+      !data.BILLING_WEBHOOK_SECRET &&
+      !data.BILLING_STRIPE_WEBHOOK_SECRET &&
+      !data.BILLING_PADDLE_WEBHOOK_SECRET;
+
+    if (
+      data.NODE_ENV === 'production' &&
+      data.BILLING_PROVIDER !== 'none' &&
+      noWebhookSecretConfigured
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['BILLING_WEBHOOK_SECRET'],
+        message: 'At least one billing webhook secret must be set in production.',
+      });
     }
   });
 

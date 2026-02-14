@@ -21,6 +21,9 @@ describe('GetUserPlanUsageUseCase', () => {
         maxResumes: 10,
         maxExports: 20,
         dailyUploadMb: 100,
+        dailyExports: 10,
+        dailyExportEmails: 20,
+        dailyBulkApplies: 20,
         createdAt: new Date(),
         updatedAt: new Date(),
       }),
@@ -36,6 +39,7 @@ describe('GetUserPlanUsageUseCase', () => {
 
     const resumeExportRepository = {
       countByUser: jest.fn().mockResolvedValue(3),
+      countByUserInRange: jest.fn().mockResolvedValue(2),
       getUploadedBytesByUserInRange: jest.fn().mockResolvedValue(2048),
       create: jest.fn(),
       markReady: jest.fn(),
@@ -44,11 +48,24 @@ describe('GetUserPlanUsageUseCase', () => {
       deleteByIds: jest.fn(),
     };
 
+    const systemLogQueryRepository = {
+      getActionCounts: jest.fn(),
+      getActionCountsByReason: jest.fn(),
+      countByUserAndActionInRange: jest
+        .fn()
+        .mockResolvedValueOnce(6)
+        .mockResolvedValueOnce(4),
+      hasActionSince: jest.fn(),
+      findFailedExportEmailJobs: jest.fn(),
+      findFailedExportEmailJobById: jest.fn(),
+    };
+
     const useCase = new GetUserPlanUsageUseCase(
       userQueryRepository,
       planLimitQueryRepository,
       resumeQueryRepository,
-      resumeExportRepository
+      resumeExportRepository,
+      systemLogQueryRepository
     );
 
     return {
@@ -57,6 +74,7 @@ describe('GetUserPlanUsageUseCase', () => {
       planLimitQueryRepository,
       resumeQueryRepository,
       resumeExportRepository,
+      systemLogQueryRepository,
     };
   };
 
@@ -74,16 +92,25 @@ describe('GetUserPlanUsageUseCase', () => {
           maxExports: 20,
           dailyUploadMb: 100,
           dailyUploadBytes: 104857600,
+          dailyExports: 10,
+          dailyExportEmails: 20,
+          dailyBulkApplies: 20,
         }),
         usage: {
           resumesUsed: 1,
           exportsUsed: 3,
+          dailyExportsUsed: 2,
           dailyUploadUsedBytes: 2048,
+          dailyExportEmailsUsed: 6,
+          dailyBulkAppliesUsed: 4,
         },
         remaining: {
           resumes: 9,
           exports: 17,
+          dailyExports: 8,
           dailyUploadBytes: 104855552,
+          dailyExportEmails: 14,
+          dailyBulkApplies: 16,
         },
       })
     );
@@ -117,6 +144,9 @@ describe('GetUserPlanUsageUseCase', () => {
       maxResumes: 1,
       maxExports: 1,
       dailyUploadMb: 1,
+      dailyExports: 1,
+      dailyExportEmails: 1,
+      dailyBulkApplies: 1,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -125,7 +155,11 @@ describe('GetUserPlanUsageUseCase', () => {
       { id: 'resume-2', name: 'B', isDefault: false },
     ]);
     deps.resumeExportRepository.countByUser.mockResolvedValue(3);
+    deps.resumeExportRepository.countByUserInRange.mockResolvedValue(3);
     deps.resumeExportRepository.getUploadedBytesByUserInRange.mockResolvedValue(2 * 1024 * 1024);
+    deps.systemLogQueryRepository.countByUserAndActionInRange
+      .mockResolvedValueOnce(3)
+      .mockResolvedValueOnce(3);
 
     const result = await deps.useCase.execute({ userId: 'user-1' });
 
@@ -133,7 +167,10 @@ describe('GetUserPlanUsageUseCase', () => {
     expect(result.getValue().remaining).toEqual({
       resumes: 0,
       exports: 0,
+      dailyExports: 0,
       dailyUploadBytes: 0,
+      dailyExportEmails: 0,
+      dailyBulkApplies: 0,
     });
   });
 

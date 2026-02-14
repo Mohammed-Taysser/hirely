@@ -13,6 +13,16 @@ describe('GetExportOpsMetricsUseCase', () => {
         [SystemActions.EXPORT_CLEANUP_RUN_COMPLETED]: 4,
         [SystemActions.EXPORT_CLEANUP_RUN_FAILED]: 1,
       }),
+      getActionCountsByReason: jest.fn().mockResolvedValue({
+        [SystemActions.EXPORT_EMAIL_SENT]: {
+          'free-tier-export': 7,
+          'bulk-apply': 2,
+        },
+        [SystemActions.EXPORT_EMAIL_FAILED]: {
+          'free-tier-export': 1,
+          'bulk-apply': 2,
+        },
+      }),
     };
 
     const useCase = new GetExportOpsMetricsUseCase(repository as never);
@@ -29,6 +39,16 @@ describe('GetExportOpsMetricsUseCase', () => {
           emailFailed: 3,
           cleanupCompleted: 4,
           cleanupFailed: 1,
+          emailByReason: {
+            freeTierExport: {
+              sent: 7,
+              failed: 1,
+            },
+            bulkApply: {
+              sent: 2,
+              failed: 2,
+            },
+          },
         },
       })
     );
@@ -37,6 +57,7 @@ describe('GetExportOpsMetricsUseCase', () => {
   it('returns unexpected error when repository fails', async () => {
     const repository = {
       getActionCounts: jest.fn().mockRejectedValue(new Error('db failed')),
+      getActionCountsByReason: jest.fn(),
     };
 
     const useCase = new GetExportOpsMetricsUseCase(repository as never);
@@ -44,5 +65,32 @@ describe('GetExportOpsMetricsUseCase', () => {
 
     expect(result.isFailure).toBe(true);
     expect(result.error).toBeInstanceOf(UnexpectedError);
+  });
+
+  it('defaults reason-split counters to zero when repository omits a reason bucket', async () => {
+    const repository = {
+      getActionCounts: jest.fn().mockResolvedValue({
+        [SystemActions.EXPORT_PDF_PROCESSED]: 1,
+        [SystemActions.EXPORT_PDF_FAILED]: 0,
+        [SystemActions.EXPORT_EMAIL_SENT]: 1,
+        [SystemActions.EXPORT_EMAIL_FAILED]: 0,
+        [SystemActions.EXPORT_CLEANUP_RUN_COMPLETED]: 0,
+        [SystemActions.EXPORT_CLEANUP_RUN_FAILED]: 0,
+      }),
+      getActionCountsByReason: jest.fn().mockResolvedValue({
+        [SystemActions.EXPORT_EMAIL_SENT]: {
+          'free-tier-export': 1,
+        },
+      }),
+    };
+
+    const useCase = new GetExportOpsMetricsUseCase(repository as never);
+    const result = await useCase.execute({ hours: 24 });
+
+    expect(result.isSuccess).toBe(true);
+    expect(result.getValue().counters.emailByReason).toEqual({
+      freeTierExport: { sent: 1, failed: 0 },
+      bulkApply: { sent: 0, failed: 0 },
+    });
   });
 });

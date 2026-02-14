@@ -6,6 +6,8 @@
     "resume-templates"
   ],
   "scripts": {
-    "build": "yarn workspace @hirely/resume-core build && yarn workspace @hirely/resume-templates build"
+    "build": "yarn workspace @hirely/resume-core build && yarn workspace @hirely/resume-templates build",
+    "semver:check": "node ../.github/scripts/check-packages-semver.mjs",
+    "changelog:tag": "node ../.github/scripts/generate-package-changelog.mjs"
   }
 }

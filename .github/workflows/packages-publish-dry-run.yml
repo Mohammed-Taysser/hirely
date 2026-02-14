@@ -1,0 +1,38 @@
+name: Packages Publish Dry Run
+
+on:
+  pull_request:
+    paths:
+      - 'packages/**'
+      - '.github/workflows/packages-publish-dry-run.yml'
+      - '.github/workflows/packages-publish.yml'
+
+jobs:
+  dry-run:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package_dir:
+          - packages/resume-core
+          - packages/resume-templates
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        working-directory: ${{ matrix.package_dir }}
+        run: npm ci
+
+      - name: Build package
+        working-directory: ${{ matrix.package_dir }}
+        run: npm run build
+
+      - name: Publish dry run
+        working-directory: ${{ matrix.package_dir }}
+        run: npm publish --dry-run --access public

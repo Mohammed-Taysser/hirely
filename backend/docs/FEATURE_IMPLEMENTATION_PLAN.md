@@ -69,9 +69,39 @@ Current baseline:
 
 ## Next Iteration Candidates
 
-1. Add queue metrics split by reason (`free-tier-export` vs `bulk-apply`) for email success/failure.
+- None for the current plan scope (Phases 1-5 + post-plan additions are implemented).
 
 ## Post-Plan Additions
+
+- Added billing provider integration + cycle-aware downgrade scheduling:
+  - configurable `BILLING_PROVIDER` (`mock` / `none`)
+  - configurable `BILLING_DOWNGRADE_BEHAVIOR` (`cycle_end` / `immediate`)
+  - explicit `scheduleAt` is still honored
+  - when omitted, downgrade requests are auto-scheduled at billing cycle end
+- Added per-feature daily limit support:
+  - new plan limit: `dailyBulkApplies`
+  - canonical policy support for daily bulk-apply checks
+  - `BulkApplyUseCase` enforcement using `SystemLog` action counts for current UTC day
+  - `GET /api/users/me/plan-usage` now includes bulk-apply limit/usage/remaining
+- Added package semantic versioning workflow for template/core packages:
+  - CI workflow: `.github/workflows/packages-semver-check.yml`
+  - checker script: `.github/scripts/check-packages-semver.mjs`
+  - release documentation: `packages/RELEASING.md`
+- Added SDK-aware webhook signature verification + fallback:
+  - Stripe/Paddle SDK verification attempts
+  - HMAC fallback path when SDK packages are unavailable
+- Added billing webhook dead-letter + replay flow:
+  - failed-event persistence model and repository
+  - `GET /api/billing/webhooks/failed`
+  - `POST /api/billing/webhooks/failed/:webhookEventId/replay`
+- Added package release-note automation:
+  - changelog script: `.github/scripts/generate-package-changelog.mjs`
+  - workflow: `.github/workflows/packages-release-notes.yml`
+
+- Added queue metrics split by reason:
+  - `GET /api/metrics/export-ops` now includes `counters.emailByReason`
+  - reason buckets: `freeTierExport` and `bulkApply`
+  - each bucket includes `sent` and `failed` counters
 
 - Added user-facing plan usage endpoint:
   - `GET /api/users/me/plan-usage`

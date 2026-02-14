@@ -13,19 +13,40 @@ const seed = async () => {
       code: 'FREE',
       name: 'Free',
       description: 'Starter plan',
-      limits: { maxResumes: 2, maxExports: 2, dailyUploadMb: 100 },
+      limits: {
+        maxResumes: 2,
+        maxExports: 2,
+        dailyUploadMb: 100,
+        dailyExports: 3,
+        dailyExportEmails: 5,
+        dailyBulkApplies: 3,
+      },
     },
     {
       code: 'PLUS',
       name: 'Plus',
       description: 'For active job seekers',
-      limits: { maxResumes: 10, maxExports: 20, dailyUploadMb: 500 },
+      limits: {
+        maxResumes: 10,
+        maxExports: 20,
+        dailyUploadMb: 500,
+        dailyExports: 50,
+        dailyExportEmails: 75,
+        dailyBulkApplies: 25,
+      },
     },
     {
       code: 'PRO',
       name: 'Pro',
       description: 'Teams and power users',
-      limits: { maxResumes: 50, maxExports: 200, dailyUploadMb: 1024 },
+      limits: {
+        maxResumes: 50,
+        maxExports: 200,
+        dailyUploadMb: 1024,
+        dailyExports: 300,
+        dailyExportEmails: 500,
+        dailyBulkApplies: 200,
+      },
     },
   ];
 

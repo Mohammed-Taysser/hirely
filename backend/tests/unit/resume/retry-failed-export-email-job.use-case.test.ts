@@ -21,6 +21,8 @@ describe('RetryFailedExportEmailJobUseCase', () => {
         createdAt: new Date('2026-02-14T00:00:00.000Z'),
       }),
       getActionCounts: jest.fn(),
+      getActionCountsByReason: jest.fn(),
+      countByUserAndActionInRange: jest.fn(),
       hasActionSince: jest.fn(),
       findFailedExportEmailJobs: jest.fn(),
     },

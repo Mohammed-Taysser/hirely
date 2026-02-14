@@ -2,7 +2,11 @@ import CONFIG from '@/apps/config';
 import { ActivityService } from '@/modules/activity/infrastructure/services/activity.service';
 import { PrismaAuditLogQueryRepository } from '@/modules/audit/infrastructure/persistence/prisma-audit-log.query.repository';
 import { PrismaAuditLogService } from '@/modules/audit/infrastructure/services/prisma-audit-log.service';
+import { PrismaBillingWebhookEventRepository } from '@/modules/billing/infrastructure/persistence/prisma-billing-webhook-event.repository';
 import { BillingService } from '@/modules/billing/infrastructure/services/billing.service';
+import { MockBillingProviderService } from '@/modules/billing/infrastructure/services/mock-billing-provider.service';
+import { NoopBillingProviderService } from '@/modules/billing/infrastructure/services/noop-billing-provider.service';
+import { SdkBillingWebhookSignatureVerifierService } from '@/modules/billing/infrastructure/services/sdk-billing-webhook-signature-verifier.service';
 import { PrismaPlanLimitQueryRepository } from '@/modules/plan/infrastructure/persistence/prisma-plan-limit.query.repository';
 import { PrismaPlanCommandRepository } from '@/modules/plan/infrastructure/persistence/prisma-plan.command.repository';
 import { PrismaPlanQueryRepository } from '@/modules/plan/infrastructure/persistence/prisma-plan.query.repository';
@@ -28,12 +32,14 @@ import { PrismaSystemLogQueryRepository } from '@/modules/system/infrastructure/
 import { OsSystemHealthService } from '@/modules/system/infrastructure/services/os-system-health.service';
 import { PrismaSystemLogService } from '@/modules/system/infrastructure/services/prisma-system-log.service';
 import { PrismaUserPlanChangeRepository } from '@/modules/user/infrastructure/persistence/prisma-user-plan-change.repository';
+import { PrismaUserPlanCommandRepository } from '@/modules/user/infrastructure/persistence/prisma-user-plan-command.repository';
 import { PrismaUserQueryRepository } from '@/modules/user/infrastructure/persistence/prisma-user.query.repository';
 import { PrismaUserRepository } from '@/modules/user/infrastructure/persistence/prisma-user.repository';
 
 const userRepository = new PrismaUserRepository();
 const userQueryRepository = new PrismaUserQueryRepository();
 const userPlanChangeRepository = new PrismaUserPlanChangeRepository();
+const userPlanCommandRepository = new PrismaUserPlanCommandRepository();
 const planQueryRepository = new PrismaPlanQueryRepository();
 const planCommandRepository = new PrismaPlanCommandRepository();
 const planLimitQueryRepository = new PrismaPlanLimitQueryRepository();
@@ -50,7 +56,17 @@ const exportStorage =
 const pdfRenderer = new GotenbergPdfRenderer();
 const resumeTemplateRenderer = new ResumeTemplateRenderer();
 const exportEmailQueueService = new BullmqExportEmailQueueService();
-const billingService = new BillingService(planLimitQueryRepository, resumeExportRepository);
+const billingProviderService =
+  CONFIG.BILLING_PROVIDER === 'none'
+    ? new NoopBillingProviderService()
+    : new MockBillingProviderService();
+const billingWebhookEventRepository = new PrismaBillingWebhookEventRepository();
+const webhookSignatureVerifierService = new SdkBillingWebhookSignatureVerifierService();
+const billingService = new BillingService(
+  planLimitQueryRepository,
+  resumeExportRepository,
+  billingProviderService
+);
 const activityService = new ActivityService();
 const systemLogService = new PrismaSystemLogService();
 const systemLogQueryRepository = new PrismaSystemLogQueryRepository();
@@ -84,6 +100,7 @@ export {
   auditLogQueryRepository,
   auditLogService,
   billingService,
+  billingWebhookEventRepository,
   bulkApplyEmailQueueService,
   exportEmailQueueService,
   exportQueueService,
@@ -109,5 +126,7 @@ export {
   tokenService,
   userQueryRepository,
   userPlanChangeRepository,
+  userPlanCommandRepository,
   userRepository,
+  webhookSignatureVerifierService,
 };

@@ -2,6 +2,7 @@ import express from 'express';
 
 import auditRoutes from '@/modules/audit/presentation/audit.route';
 import authRoutes from '@/modules/auth/presentation/auth.route';
+import billingRoutes from '@/modules/billing/presentation/billing.route';
 import planRoutes from '@/modules/plan/presentation/plan.route';
 import resumeRoutes from '@/modules/resume/presentation/resume.route';
 import resumeTemplateRoutes from '@/modules/resumeTemplate/presentation/resumeTemplate.route';
@@ -13,6 +14,7 @@ const registerApiRoutes = (app: express.Express) => {
 
   apiRoutes.use('/', systemRoutes);
   apiRoutes.use('/auth', authRoutes);
+  apiRoutes.use('/billing', billingRoutes);
   apiRoutes.use('/audit-logs', auditRoutes);
   apiRoutes.use('/plans', planRoutes);
   apiRoutes.use('/resume-templates', resumeTemplateRoutes);

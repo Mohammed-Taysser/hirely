@@ -1,10 +1,11 @@
 import { BulkApplyUseCase } from '@dist/modules/resume/application/use-cases/bulk-apply/bulk-apply.use-case';
 import {
   ConflictError,
+  ForbiddenError,
   NotFoundError,
   TooManyRequestsError,
-  ValidationError,
   UnexpectedError,
+  ValidationError,
 } from '@dist/modules/shared/application/app-error';
 
 describe('BulkApplyUseCase', () => {
@@ -35,8 +36,32 @@ describe('BulkApplyUseCase', () => {
     resumeSnapshotRepository: {
       createSnapshot: jest.fn().mockResolvedValue({ id: 'snapshot-1' }),
     },
+    planLimitQueryRepository: {
+      findByPlanId: jest.fn().mockResolvedValue({
+        id: 'limit-1',
+        planId: 'plan-1',
+        maxResumes: 10,
+        maxExports: 10,
+        dailyUploadMb: 100,
+        dailyExports: 10,
+        dailyExportEmails: 20,
+        dailyBulkApplies: 20,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
+    },
+    systemLogQueryRepository: {
+      getActionCounts: jest.fn(),
+      getActionCountsByReason: jest.fn(),
+      countByUserAndActionInRange: jest.fn().mockResolvedValue(0),
+      hasActionSince: jest.fn(),
+      findFailedExportEmailJobs: jest.fn(),
+      findFailedExportEmailJobById: jest.fn(),
+    },
     userQueryRepository: {
-      findById: jest.fn().mockResolvedValue({ id: 'user-1', planId: 'plan-1', plan: { code: 'PRO' } }),
+      findById: jest
+        .fn()
+        .mockResolvedValue({ id: 'user-1', planId: 'plan-1', plan: { code: 'PRO' } }),
       findByEmail: jest.fn(),
       findAuthByEmail: jest.fn(),
       getPaginatedUsers: jest.fn(),
@@ -48,14 +73,13 @@ describe('BulkApplyUseCase', () => {
     auditLogService: { log: jest.fn() },
   });
 
-  it('returns rate-limit error when limiter rejects request', async () => {
-    const d = makeDeps();
-    d.rateLimiter.consume.mockResolvedValue(false);
-
-    const useCase = new BulkApplyUseCase(
+  const createUseCase = (d: ReturnType<typeof makeDeps>) =>
+    new BulkApplyUseCase(
       d.exportService,
       d.exportQueueService,
       d.resumeSnapshotRepository,
+      d.planLimitQueryRepository,
+      d.systemLogQueryRepository,
       d.userQueryRepository,
       d.rateLimiter,
       d.emailQueueService,
@@ -64,7 +88,11 @@ describe('BulkApplyUseCase', () => {
       d.auditLogService
     );
 
-    const result = await useCase.execute(request);
+  it('returns rate-limit error when limiter rejects request', async () => {
+    const d = makeDeps();
+    d.rateLimiter.consume.mockResolvedValue(false);
+
+    const result = await createUseCase(d).execute(request);
 
     expect(result.isFailure).toBe(true);
     expect(result.error).toBeInstanceOf(TooManyRequestsError);
@@ -74,19 +102,7 @@ describe('BulkApplyUseCase', () => {
     const d = makeDeps();
     d.resumeSnapshotRepository.createSnapshot.mockResolvedValue(null);
 
-    const useCase = new BulkApplyUseCase(
-      d.exportService,
-      d.exportQueueService,
-      d.resumeSnapshotRepository,
-      d.userQueryRepository,
-      d.rateLimiter,
-      d.emailQueueService,
-      { max: 2, windowSeconds: 60 },
-      d.systemLogService,
-      d.auditLogService
-    );
-
-    const result = await useCase.execute(request);
+    const result = await createUseCase(d).execute(request);
 
     expect(result.isFailure).toBe(true);
     expect(result.error).toBeInstanceOf(NotFoundError);
@@ -96,19 +112,7 @@ describe('BulkApplyUseCase', () => {
     const d = makeDeps();
     d.userQueryRepository.findById.mockResolvedValue({ id: 'user-1', planId: null, plan: null });
 
-    const useCase = new BulkApplyUseCase(
-      d.exportService,
-      d.exportQueueService,
-      d.resumeSnapshotRepository,
-      d.userQueryRepository,
-      d.rateLimiter,
-      d.emailQueueService,
-      { max: 2, windowSeconds: 60 },
-      d.systemLogService,
-      d.auditLogService
-    );
-
-    const result = await useCase.execute(request);
+    const result = await createUseCase(d).execute(request);
 
     expect(result.isFailure).toBe(true);
     expect(result.error).toBeInstanceOf(NotFoundError);
@@ -122,40 +126,39 @@ describe('BulkApplyUseCase', () => {
       plan: { code: '' },
     });
 
-    const useCase = new BulkApplyUseCase(
-      d.exportService,
-      d.exportQueueService,
-      d.resumeSnapshotRepository,
-      d.userQueryRepository,
-      d.rateLimiter,
-      d.emailQueueService,
-      { max: 2, windowSeconds: 60 },
-      d.systemLogService,
-      d.auditLogService
-    );
-
-    const result = await useCase.execute(request);
+    const result = await createUseCase(d).execute(request);
 
     expect(result.isFailure).toBe(true);
     expect(result.error).toBeInstanceOf(NotFoundError);
   });
 
+  it('returns forbidden when daily bulk apply limit is reached', async () => {
+    const d = makeDeps();
+    d.planLimitQueryRepository.findByPlanId.mockResolvedValue({
+      id: 'limit-1',
+      planId: 'plan-1',
+      maxResumes: 10,
+      maxExports: 10,
+      dailyUploadMb: 100,
+        dailyExports: 10,
+        dailyExportEmails: 20,
+        dailyBulkApplies: 1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    d.systemLogQueryRepository.countByUserAndActionInRange.mockResolvedValue(1);
+
+    const result = await createUseCase(d).execute(request);
+
+    expect(result.isFailure).toBe(true);
+    expect(result.error).toBeInstanceOf(ForbiddenError);
+    expect(d.exportService.enforceExportLimit).not.toHaveBeenCalled();
+  });
+
   it('enqueues export and emails all recipients', async () => {
     const d = makeDeps();
 
-    const useCase = new BulkApplyUseCase(
-      d.exportService,
-      d.exportQueueService,
-      d.resumeSnapshotRepository,
-      d.userQueryRepository,
-      d.rateLimiter,
-      d.emailQueueService,
-      { max: 2, windowSeconds: 60 },
-      d.systemLogService,
-      d.auditLogService
-    );
-
-    const result = await useCase.execute(request);
+    const result = await createUseCase(d).execute(request);
 
     expect(result.isSuccess).toBe(true);
     expect(result.getValue().exportId).toBe('export-1');
@@ -171,19 +174,7 @@ describe('BulkApplyUseCase', () => {
     const d = makeDeps();
     d.exportService.enforceExportLimit.mockRejectedValue(new Error('boom'));
 
-    const useCase = new BulkApplyUseCase(
-      d.exportService,
-      d.exportQueueService,
-      d.resumeSnapshotRepository,
-      d.userQueryRepository,
-      d.rateLimiter,
-      d.emailQueueService,
-      { max: 2, windowSeconds: 60 },
-      d.systemLogService,
-      d.auditLogService
-    );
-
-    const result = await useCase.execute(request);
+    const result = await createUseCase(d).execute(request);
 
     expect(result.isFailure).toBe(true);
     expect(result.error).toBeInstanceOf(UnexpectedError);
@@ -193,19 +184,7 @@ describe('BulkApplyUseCase', () => {
     const d = makeDeps();
     d.exportService.enforceExportLimit.mockRejectedValue(new ConflictError('limit conflict'));
 
-    const useCase = new BulkApplyUseCase(
-      d.exportService,
-      d.exportQueueService,
-      d.resumeSnapshotRepository,
-      d.userQueryRepository,
-      d.rateLimiter,
-      d.emailQueueService,
-      { max: 2, windowSeconds: 60 },
-      d.systemLogService,
-      d.auditLogService
-    );
-
-    const result = await useCase.execute(request);
+    const result = await createUseCase(d).execute(request);
 
     expect(result.isFailure).toBe(true);
     expect(result.error).toBeInstanceOf(ConflictError);
@@ -215,19 +194,7 @@ describe('BulkApplyUseCase', () => {
     const d = makeDeps();
     d.exportService.enforceExportLimit.mockRejectedValue('boom');
 
-    const useCase = new BulkApplyUseCase(
-      d.exportService,
-      d.exportQueueService,
-      d.resumeSnapshotRepository,
-      d.userQueryRepository,
-      d.rateLimiter,
-      d.emailQueueService,
-      { max: 2, windowSeconds: 60 },
-      d.systemLogService,
-      d.auditLogService
-    );
-
-    const result = await useCase.execute(request);
+    const result = await createUseCase(d).execute(request);
 
     expect(result.isFailure).toBe(true);
     expect(result.error).toBeInstanceOf(UnexpectedError);
@@ -241,17 +208,7 @@ describe('BulkApplyUseCase', () => {
 
   it('throws validation error for blank plan code in guard helper', () => {
     const d = makeDeps();
-    const useCase = new BulkApplyUseCase(
-      d.exportService,
-      d.exportQueueService,
-      d.resumeSnapshotRepository,
-      d.userQueryRepository,
-      d.rateLimiter,
-      d.emailQueueService,
-      { max: 2, windowSeconds: 60 },
-      d.systemLogService,
-      d.auditLogService
-    ) as unknown as { ensureBulkApplyAllowed: (planCode: string) => void };
+    const useCase = createUseCase(d) as unknown as { ensureBulkApplyAllowed: (planCode: string) => void };
 
     expect(() => useCase.ensureBulkApplyAllowed('')).toThrow(ValidationError);
   });

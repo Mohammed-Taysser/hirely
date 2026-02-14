@@ -25,6 +25,9 @@ const createPlanSchema = {
       maxResumes: z.number().int().min(0),
       maxExports: z.number().int().min(0),
       dailyUploadMb: z.number().int().min(0),
+      dailyExports: z.number().int().min(0),
+      dailyExportEmails: z.number().int().min(0),
+      dailyBulkApplies: z.number().int().min(0),
     }),
   }),
 };
@@ -41,6 +44,9 @@ const updatePlanSchema = {
           maxResumes: z.number().int().min(0).optional(),
           maxExports: z.number().int().min(0).optional(),
           dailyUploadMb: z.number().int().min(0).optional(),
+          dailyExports: z.number().int().min(0).optional(),
+          dailyExportEmails: z.number().int().min(0).optional(),
+          dailyBulkApplies: z.number().int().min(0).optional(),
         })
         .optional(),
     })

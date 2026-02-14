@@ -12,5 +12,15 @@ export interface GetExportOpsMetricsResponseDto {
     emailFailed: number;
     cleanupCompleted: number;
     cleanupFailed: number;
+    emailByReason: {
+      freeTierExport: {
+        sent: number;
+        failed: number;
+      };
+      bulkApply: {
+        sent: number;
+        failed: number;
+      };
+    };
   };
 }

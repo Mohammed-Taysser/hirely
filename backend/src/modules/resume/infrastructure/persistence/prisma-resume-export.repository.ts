@@ -76,6 +76,18 @@ export class PrismaResumeExportRepository implements IResumeExportRepository {
     return prisma.resumeExport.count({ where: { userId } });
   }
 
+  async countByUserInRange(userId: string, start: Date, end: Date): Promise<number> {
+    return prisma.resumeExport.count({
+      where: {
+        userId,
+        createdAt: {
+          gte: start,
+          lte: end,
+        },
+      },
+    });
+  }
+
   async getUploadedBytesByUserInRange(userId: string, start: Date, end: Date): Promise<number> {
     const result = await prisma.resumeExport.aggregate({
       where: {

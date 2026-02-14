@@ -7,6 +7,7 @@ describe('apps/routes', () => {
 
     const systemRoutes = jest.fn();
     const authRoutes = jest.fn();
+    const billingRoutes = jest.fn();
     const auditRoutes = jest.fn();
     const planRoutes = jest.fn();
     const resumeTemplateRoutes = jest.fn();
@@ -27,6 +28,10 @@ describe('apps/routes', () => {
     jest.doMock('@dist/modules/auth/presentation/auth.route', () => ({
       __esModule: true,
       default: authRoutes,
+    }));
+    jest.doMock('@dist/modules/billing/presentation/billing.route', () => ({
+      __esModule: true,
+      default: billingRoutes,
     }));
     jest.doMock('@dist/modules/audit/presentation/audit.route', () => ({
       __esModule: true,
@@ -57,11 +62,12 @@ describe('apps/routes', () => {
     expect(Router).toHaveBeenCalledTimes(1);
     expect(apiRouter.use).toHaveBeenNthCalledWith(1, '/', systemRoutes);
     expect(apiRouter.use).toHaveBeenNthCalledWith(2, '/auth', authRoutes);
-    expect(apiRouter.use).toHaveBeenNthCalledWith(3, '/audit-logs', auditRoutes);
-    expect(apiRouter.use).toHaveBeenNthCalledWith(4, '/plans', planRoutes);
-    expect(apiRouter.use).toHaveBeenNthCalledWith(5, '/resume-templates', resumeTemplateRoutes);
-    expect(apiRouter.use).toHaveBeenNthCalledWith(6, '/resumes', resumeRoutes);
-    expect(apiRouter.use).toHaveBeenNthCalledWith(7, '/users', userRoutes);
+    expect(apiRouter.use).toHaveBeenNthCalledWith(3, '/billing', billingRoutes);
+    expect(apiRouter.use).toHaveBeenNthCalledWith(4, '/audit-logs', auditRoutes);
+    expect(apiRouter.use).toHaveBeenNthCalledWith(5, '/plans', planRoutes);
+    expect(apiRouter.use).toHaveBeenNthCalledWith(6, '/resume-templates', resumeTemplateRoutes);
+    expect(apiRouter.use).toHaveBeenNthCalledWith(7, '/resumes', resumeRoutes);
+    expect(apiRouter.use).toHaveBeenNthCalledWith(8, '/users', userRoutes);
     expect(app.use).toHaveBeenCalledWith('/api', apiRouter);
   });
 });

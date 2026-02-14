@@ -10,6 +10,9 @@ describe('BillingService', () => {
         maxResumes: 10,
         maxExports: 10,
         dailyUploadMb: 1,
+        dailyExports: 10,
+        dailyExportEmails: 20,
+        dailyBulkApplies: 5,
         createdAt: new Date(),
         updatedAt: new Date(),
       }),
@@ -25,12 +28,24 @@ describe('BillingService', () => {
       deleteByIds: jest.fn(),
     };
 
-    const service = new BillingService(planLimitQueryRepository, resumeExportRepository);
+    const billingProviderService = {
+      getCycleInfo: jest.fn().mockResolvedValue({
+        currentPeriodEnd: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        provider: 'mock',
+      }),
+    };
+
+    const service = new BillingService(
+      planLimitQueryRepository,
+      resumeExportRepository,
+      billingProviderService
+    );
 
     return {
       service,
       planLimitQueryRepository,
       resumeExportRepository,
+      billingProviderService,
     };
   };
 
@@ -73,5 +88,97 @@ describe('BillingService', () => {
       expect.any(Date),
       expect.any(Date)
     );
+  });
+
+  it('resolves user requested schedule directly', async () => {
+    const deps = buildDependencies();
+    const scheduleAt = new Date(Date.now() + 3600_000);
+
+    const result = await deps.service.resolvePlanChangeSchedule({
+      userId: 'user-1',
+      currentPlanId: 'plan-1',
+      targetPlanId: 'plan-2',
+      requestedScheduleAt: scheduleAt,
+    });
+
+    expect(result).toEqual({ effectiveAt: scheduleAt, reason: 'user-scheduled' });
+    expect(deps.planLimitQueryRepository.findByPlanId).not.toHaveBeenCalled();
+  });
+
+  it('schedules downgrade at billing cycle end when target plan is lower', async () => {
+    const deps = buildDependencies();
+    deps.planLimitQueryRepository.findByPlanId
+      .mockResolvedValueOnce({
+        id: 'limit-current',
+        planId: 'plan-1',
+        maxResumes: 10,
+        maxExports: 10,
+        dailyUploadMb: 10,
+        dailyExports: 10,
+        dailyExportEmails: 20,
+        dailyBulkApplies: 20,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .mockResolvedValueOnce({
+        id: 'limit-target',
+        planId: 'plan-2',
+        maxResumes: 5,
+        maxExports: 5,
+        dailyUploadMb: 5,
+        dailyExports: 10,
+        dailyExportEmails: 20,
+        dailyBulkApplies: 5,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+    const result = await deps.service.resolvePlanChangeSchedule({
+      userId: 'user-1',
+      currentPlanId: 'plan-1',
+      targetPlanId: 'plan-2',
+    });
+
+    expect(result.reason).toBe('billing-cycle');
+    expect(result.effectiveAt).toBeInstanceOf(Date);
+    expect(deps.billingProviderService.getCycleInfo).toHaveBeenCalledWith('user-1');
+  });
+
+  it('applies upgrade immediately without billing cycle scheduling', async () => {
+    const deps = buildDependencies();
+    deps.planLimitQueryRepository.findByPlanId
+      .mockResolvedValueOnce({
+        id: 'limit-current',
+        planId: 'plan-1',
+        maxResumes: 5,
+        maxExports: 5,
+        dailyUploadMb: 5,
+        dailyExports: 10,
+        dailyExportEmails: 20,
+        dailyBulkApplies: 5,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .mockResolvedValueOnce({
+        id: 'limit-target',
+        planId: 'plan-2',
+        maxResumes: 10,
+        maxExports: 10,
+        dailyUploadMb: 10,
+        dailyExports: 10,
+        dailyExportEmails: 20,
+        dailyBulkApplies: 10,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+    const result = await deps.service.resolvePlanChangeSchedule({
+      userId: 'user-1',
+      currentPlanId: 'plan-1',
+      targetPlanId: 'plan-2',
+    });
+
+    expect(result).toEqual({ effectiveAt: null, reason: 'immediate' });
+    expect(deps.billingProviderService.getCycleInfo).not.toHaveBeenCalled();
   });
 });

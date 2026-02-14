@@ -110,6 +110,8 @@ const bulkApplyUseCase = new BulkApplyUseCase(
   exportService,
   exportQueueService,
   resumeSnapshotRepository,
+  planLimitQueryRepository,
+  systemLogQueryRepository,
   userQueryRepository,
   rateLimiter,
   bulkApplyEmailQueueService,

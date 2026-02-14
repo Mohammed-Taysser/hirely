@@ -9,6 +9,10 @@ export const SystemActions = {
   USER_PLAN_SCHEDULED: 'user.plan.scheduled',
   USER_PLAN_CHANGE_FAILED: 'user.plan.change.failed',
   USER_PLAN_APPLIED: 'user.plan.applied',
+  BILLING_WEBHOOK_RECEIVED: 'billing.webhook.received',
+  BILLING_WEBHOOK_FAILED: 'billing.webhook.failed',
+  BILLING_WEBHOOK_REPLAYED: 'billing.webhook.replayed',
+  BILLING_WEBHOOK_REPLAY_FAILED: 'billing.webhook.replay.failed',
 
   PLAN_CREATED: 'plan.created',
   PLAN_CREATE_FAILED: 'plan.create.failed',

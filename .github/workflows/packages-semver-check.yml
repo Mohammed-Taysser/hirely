@@ -1,0 +1,29 @@
+name: Packages Semver Check
+
+on:
+  pull_request:
+    paths:
+      - 'packages/**'
+      - '.github/scripts/check-packages-semver.mjs'
+      - '.github/workflows/packages-semver-check.yml'
+
+jobs:
+  semver-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate package semver bumps
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.sha }}
+        run: node .github/scripts/check-packages-semver.mjs

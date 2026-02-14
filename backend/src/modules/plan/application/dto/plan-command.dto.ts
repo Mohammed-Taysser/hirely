@@ -7,6 +7,9 @@ export interface CreatePlanRequestDto {
       maxResumes: number;
       maxExports: number;
       dailyUploadMb: number;
+      dailyExports: number;
+      dailyExportEmails: number;
+      dailyBulkApplies: number;
     };
   };
 }
@@ -16,6 +19,9 @@ export interface UpdatePlanLimitsDto {
     maxResumes?: number;
     maxExports?: number;
     dailyUploadMb?: number;
+    dailyExports?: number;
+    dailyExportEmails?: number;
+    dailyBulkApplies?: number;
   };
 }
 

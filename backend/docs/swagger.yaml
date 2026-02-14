@@ -28,6 +28,8 @@ tags:
     description: System-level operations
   - name: Auth
     description: Authentication endpoints
+  - name: Billing
+    description: Billing integration and webhook ingestion
   - name: Users
     description: User management
   - name: Plans
@@ -247,6 +249,100 @@ paths:
                       data:
                         $ref: '#/components/schemas/AuthResponse'
 
+  /billing/webhooks/events:
+    post:
+      tags: [Billing]
+      summary: Process billing provider webhook event
+      security: []
+      parameters:
+        - name: x-billing-webhook-signature
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Required for `provider=mock` (HMAC-SHA256 hex of raw body with billing secret)
+        - name: stripe-signature
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Required for `provider=stripe` (Stripe signature format `t=...,v1=...`)
+        - name: paddle-signature
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Required for `provider=paddle` (HMAC-SHA256 hex of raw body)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BillingWebhookEventInput'
+      responses:
+        '200':
+          description: Webhook accepted and processed
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/BillingWebhookResult'
+        '401':
+          description: Invalid or missing webhook signature
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /billing/webhooks/failed:
+    get:
+      tags: [Billing]
+      summary: Get failed billing webhook events for current user
+      parameters:
+        - $ref: '#/components/parameters/PageParameter'
+        - $ref: '#/components/parameters/LimitParameter'
+      responses:
+        '200':
+          description: Failed webhook events list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedBillingWebhookEventsResponse'
+
+  /billing/webhooks/failed/{webhookEventId}/replay:
+    post:
+      tags: [Billing]
+      summary: Replay failed billing webhook event
+      parameters:
+        - name: webhookEventId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Failed webhook replayed successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/BillingWebhookReplayResult'
+        '404':
+          description: Failed billing webhook event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /users/me:
     get:
       tags: [Users]
@@ -460,7 +556,7 @@ paths:
                 scheduleAt:
                   type: string
                   format: date-time
-                  description: Optional future time to schedule the plan change
+                  description: Optional future time to schedule the plan change. If omitted, downgrades are auto-scheduled at billing cycle end.
       responses:
         '200':
           description: Plan updated
@@ -1488,6 +1584,23 @@ components:
               type: integer
             cleanupFailed:
               type: integer
+            emailByReason:
+              type: object
+              properties:
+                freeTierExport:
+                  type: object
+                  properties:
+                    sent:
+                      type: integer
+                    failed:
+                      type: integer
+                bulkApply:
+                  type: object
+                  properties:
+                    sent:
+                      type: integer
+                    failed:
+                      type: integer
 
     AuthResponse:
       type: object
@@ -1499,15 +1612,140 @@ components:
         user:
           $ref: '#/components/schemas/User'
 
+    BillingWebhookEventInput:
+      type: object
+      required: [eventId, provider, type, userId]
+      properties:
+        eventId:
+          type: string
+          minLength: 8
+          maxLength: 128
+        provider:
+          type: string
+          enum: [stripe, paddle, mock]
+        type:
+          type: string
+          enum: [subscription.renewed, subscription.canceled, subscription.past_due]
+        userId:
+          type: string
+          format: uuid
+        subscriptionId:
+          type: string
+        planCode:
+          type: string
+        fallbackPlanCode:
+          type: string
+        effectiveAt:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+          additionalProperties: true
+
+    BillingWebhookResult:
+      type: object
+      properties:
+        eventId:
+          type: string
+        applied:
+          type: string
+          enum: [none, planChanged, planScheduled]
+        replayed:
+          type: boolean
+
+    BillingWebhookEvent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        provider:
+          type: string
+          enum: [stripe, paddle, mock]
+        eventId:
+          type: string
+        eventType:
+          type: string
+          enum: [subscription.renewed, subscription.canceled, subscription.past_due]
+        status:
+          type: string
+          enum: [FAILED]
+        error:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    PaginatedBillingWebhookEventsResponse:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/BillingWebhookEvent'
+                metadata:
+                  type: object
+                  properties:
+                    total:
+                      type: integer
+                    page:
+                      type: integer
+                    limit:
+                      type: integer
+                    totalPages:
+                      type: integer
+                    hasNext:
+                      type: boolean
+                    hasPrev:
+                      type: boolean
+
+    BillingWebhookReplayResult:
+      type: object
+      properties:
+        webhookEventId:
+          type: string
+          format: uuid
+        eventId:
+          type: string
+        applied:
+          type: string
+          enum: [none, planChanged, planScheduled]
+        replayed:
+          type: boolean
+
     PlanLimitInput:
       type: object
-      required: [maxResumes, maxExports, dailyUploadMb]
+      required:
+        [
+          maxResumes,
+          maxExports,
+          dailyUploadMb,
+          dailyExports,
+          dailyExportEmails,
+          dailyBulkApplies,
+        ]
       properties:
         maxResumes:
           type: integer
         maxExports:
           type: integer
         dailyUploadMb:
+          type: integer
+        dailyExports:
+          type: integer
+        dailyExportEmails:
+          type: integer
+        dailyBulkApplies:
           type: integer
 
     PlanLimit:
@@ -1521,6 +1759,12 @@ components:
         maxExports:
           type: integer
         dailyUploadMb:
+          type: integer
+        dailyExports:
+          type: integer
+        dailyExportEmails:
+          type: integer
+        dailyBulkApplies:
           type: integer
         planId:
           type: string
@@ -1613,6 +1857,12 @@ components:
               type: integer
             dailyUploadBytes:
               type: integer
+            dailyExports:
+              type: integer
+            dailyExportEmails:
+              type: integer
+            dailyBulkApplies:
+              type: integer
         usage:
           type: object
           properties:
@@ -1620,7 +1870,13 @@ components:
               type: integer
             exportsUsed:
               type: integer
+            dailyExportsUsed:
+              type: integer
             dailyUploadUsedBytes:
+              type: integer
+            dailyExportEmailsUsed:
+              type: integer
+            dailyBulkAppliesUsed:
               type: integer
         remaining:
           type: object
@@ -1629,7 +1885,13 @@ components:
               type: integer
             exports:
               type: integer
+            dailyExports:
+              type: integer
             dailyUploadBytes:
+              type: integer
+            dailyExportEmails:
+              type: integer
+            dailyBulkApplies:
               type: integer
 
     Resume:

@@ -14,6 +14,17 @@ export interface FailedExportEmailJobQuery {
 
 export interface ISystemLogQueryRepository {
   getActionCounts(actions: string[], since?: Date): Promise<Record<string, number>>;
+  getActionCountsByReason(
+    actions: string[],
+    reasons: string[],
+    since?: Date
+  ): Promise<Record<string, Record<string, number>>>;
+  countByUserAndActionInRange(
+    userId: string,
+    action: string,
+    start: Date,
+    end: Date
+  ): Promise<number>;
   hasActionSince(action: string, since: Date): Promise<boolean>;
   findFailedExportEmailJobs(
     query: FailedExportEmailJobQuery

@@ -166,9 +166,15 @@ describe('user controller integration', () => {
     mockGetUserPlanUsageExecute.mockResolvedValue(
       successResult({
         plan: { id: 'plan-1', code: 'PRO', name: 'Pro' },
-        limits: { maxResumes: 10, maxExports: 20, dailyUploadMb: 100, dailyUploadBytes: 104857600 },
-        usage: { resumesUsed: 2, exportsUsed: 5, dailyUploadUsedBytes: 1024 },
-        remaining: { resumes: 8, exports: 15, dailyUploadBytes: 104856576 },
+        limits: {
+          maxResumes: 10,
+          maxExports: 20,
+          dailyUploadMb: 100,
+          dailyUploadBytes: 104857600,
+          dailyBulkApplies: 20,
+        },
+        usage: { resumesUsed: 2, exportsUsed: 5, dailyUploadUsedBytes: 1024, dailyBulkAppliesUsed: 4 },
+        remaining: { resumes: 8, exports: 15, dailyUploadBytes: 104856576, dailyBulkApplies: 16 },
       })
     );
 

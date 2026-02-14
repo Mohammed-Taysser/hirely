@@ -34,6 +34,13 @@ describe('ChangeUserPlanUseCase', () => {
         findById: jest.fn(),
         getPaginatedPlans: jest.fn(),
       },
+      billingService: {
+        enforceDailyUploadLimit: jest.fn(),
+        resolvePlanChangeSchedule: jest.fn().mockResolvedValue({
+          effectiveAt: null,
+          reason: 'immediate',
+        }),
+      },
       systemLogService: { log: jest.fn() },
       auditLogService: { log: jest.fn() },
     };
@@ -45,6 +52,7 @@ describe('ChangeUserPlanUseCase', () => {
       d.userRepository,
       d.userQueryRepository,
       d.planQueryRepository,
+      d.billingService,
       d.systemLogService,
       d.auditLogService
     );
@@ -61,6 +69,7 @@ describe('ChangeUserPlanUseCase', () => {
       d.userRepository,
       d.userQueryRepository,
       d.planQueryRepository,
+      d.billingService,
       d.systemLogService,
       d.auditLogService
     );
@@ -78,6 +87,7 @@ describe('ChangeUserPlanUseCase', () => {
       d.userRepository,
       d.userQueryRepository,
       d.planQueryRepository,
+      d.billingService,
       d.systemLogService,
       d.auditLogService
     );
@@ -92,19 +102,26 @@ describe('ChangeUserPlanUseCase', () => {
 
   it('schedules plan for future date', async () => {
     const d = makeDeps();
+    const effectiveAt = new Date(Date.now() + 3600_000);
+    d.billingService.resolvePlanChangeSchedule.mockResolvedValueOnce({
+      effectiveAt,
+      reason: 'requested',
+    });
+
     const useCase = new ChangeUserPlanUseCase(
       d.userRepository,
       d.userQueryRepository,
       d.planQueryRepository,
+      d.billingService,
       d.systemLogService,
       d.auditLogService
     );
 
-    const scheduleAt = new Date(Date.now() + 3600_000).toISOString();
+    const scheduleAt = effectiveAt.toISOString();
     const result = await useCase.execute({ userId: 'user-1', planCode: 'PRO', scheduleAt });
 
     expect(result.isSuccess).toBe(true);
-    expect(d.userAggregate.schedulePlanChange).toHaveBeenCalled();
+    expect(d.userAggregate.schedulePlanChange).toHaveBeenCalledWith('plan-2', effectiveAt);
     expect(d.userAggregate.changePlan).not.toHaveBeenCalled();
   });
 
@@ -116,6 +133,7 @@ describe('ChangeUserPlanUseCase', () => {
       d.userRepository,
       d.userQueryRepository,
       d.planQueryRepository,
+      d.billingService,
       d.systemLogService,
       d.auditLogService
     );
@@ -132,6 +150,7 @@ describe('ChangeUserPlanUseCase', () => {
       d.userRepository,
       d.userQueryRepository,
       d.planQueryRepository,
+      d.billingService,
       d.systemLogService,
       d.auditLogService
     );
@@ -154,6 +173,7 @@ describe('ChangeUserPlanUseCase', () => {
       d.userRepository,
       d.userQueryRepository,
       d.planQueryRepository,
+      d.billingService,
       d.systemLogService,
       d.auditLogService
     );
@@ -172,6 +192,7 @@ describe('ChangeUserPlanUseCase', () => {
       d.userRepository,
       d.userQueryRepository,
       d.planQueryRepository,
+      d.billingService,
       d.systemLogService,
       d.auditLogService
     );
@@ -190,6 +211,7 @@ describe('ChangeUserPlanUseCase', () => {
       d.userRepository,
       d.userQueryRepository,
       d.planQueryRepository,
+      d.billingService,
       d.systemLogService,
       d.auditLogService
     );
@@ -208,6 +230,7 @@ describe('ChangeUserPlanUseCase', () => {
       d.userRepository,
       d.userQueryRepository,
       d.planQueryRepository,
+      d.billingService,
       d.systemLogService,
       d.auditLogService
     );
@@ -219,5 +242,29 @@ describe('ChangeUserPlanUseCase', () => {
     expect(d.systemLogService.log).toHaveBeenCalledWith(
       expect.objectContaining({ message: 'Unknown error' })
     );
+  });
+
+  it('schedules downgrade at billing cycle end when no explicit scheduleAt is provided', async () => {
+    const d = makeDeps();
+    const future = new Date(Date.now() + 60 * 60 * 1000);
+    d.billingService.resolvePlanChangeSchedule.mockResolvedValue({
+      effectiveAt: future,
+      reason: 'billing-cycle',
+    });
+
+    const useCase = new ChangeUserPlanUseCase(
+      d.userRepository,
+      d.userQueryRepository,
+      d.planQueryRepository,
+      d.billingService,
+      d.systemLogService,
+      d.auditLogService
+    );
+
+    const result = await useCase.execute({ userId: 'user-1', planCode: 'PRO' });
+
+    expect(result.isSuccess).toBe(true);
+    expect(d.userAggregate.schedulePlanChange).toHaveBeenCalledWith('plan-2', future);
+    expect(d.userAggregate.changePlan).not.toHaveBeenCalled();
   });
 });

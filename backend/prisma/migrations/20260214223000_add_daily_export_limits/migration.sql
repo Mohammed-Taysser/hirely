@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "PlanLimit"
+ADD COLUMN "dailyExports" INTEGER NOT NULL DEFAULT 5,
+ADD COLUMN "dailyExportEmails" INTEGER NOT NULL DEFAULT 20;

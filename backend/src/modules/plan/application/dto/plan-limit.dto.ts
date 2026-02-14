@@ -3,6 +3,9 @@ export interface PlanLimitDto {
   maxResumes: number;
   maxExports: number;
   dailyUploadMb: number;
+  dailyExports: number;
+  dailyExportEmails: number;
+  dailyBulkApplies: number;
   planId: string;
   createdAt: Date;
   updatedAt: Date;
@@ -13,4 +16,7 @@ export interface PlanUsageLimits {
   maxExports: number;
   dailyUploadMb: number;
   dailyUploadBytes: number;
+  dailyExports: number;
+  dailyExportEmails: number;
+  dailyBulkApplies: number;
 }

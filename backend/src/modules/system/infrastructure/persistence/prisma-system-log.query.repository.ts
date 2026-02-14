@@ -63,6 +63,65 @@ export class PrismaSystemLogQueryRepository implements ISystemLogQueryRepository
     return Boolean(latest);
   }
 
+  async countByUserAndActionInRange(
+    userId: string,
+    action: string,
+    start: Date,
+    end: Date
+  ): Promise<number> {
+    return prisma.systemLog.count({
+      where: {
+        userId,
+        action,
+        createdAt: {
+          gte: start,
+          lte: end,
+        },
+      },
+    });
+  }
+
+  async getActionCountsByReason(
+    actions: string[],
+    reasons: string[],
+    since?: Date
+  ): Promise<Record<string, Record<string, number>>> {
+    if (actions.length === 0 || reasons.length === 0) {
+      return {};
+    }
+
+    const countMap = actions.reduce<Record<string, Record<string, number>>>((acc, action) => {
+      acc[action] = reasons.reduce<Record<string, number>>((reasonAcc, reason) => {
+        reasonAcc[reason] = 0;
+        return reasonAcc;
+      }, {});
+      return acc;
+    }, {});
+
+    for (const action of actions) {
+      for (const reason of reasons) {
+        countMap[action][reason] = await prisma.systemLog.count({
+          where: {
+            action,
+            ...(since
+              ? {
+                  createdAt: {
+                    gte: since,
+                  },
+                }
+              : {}),
+            metadata: {
+              path: ['reason'],
+              equals: reason,
+            },
+          },
+        });
+      }
+    }
+
+    return countMap;
+  }
+
   async findFailedExportEmailJobs(
     query: FailedExportEmailJobQuery
   ): Promise<{ jobs: FailedExportEmailJobDto[]; total: number }> {

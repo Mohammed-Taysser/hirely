@@ -31,6 +31,9 @@ const buildDependencies = () => {
 
   const billingService = {
     enforceDailyUploadLimit: jest.fn().mockResolvedValue(undefined),
+    resolvePlanChangeSchedule: jest
+      .fn()
+      .mockResolvedValue({ effectiveAt: null, reason: 'immediate' }),
   };
 
   const activityService = {
@@ -44,6 +47,9 @@ const buildDependencies = () => {
       maxResumes: 10,
       maxExports: 10,
       dailyUploadMb: 10,
+        dailyExports: 10,
+        dailyExportEmails: 20,
+        dailyBulkApplies: 10,
       createdAt: new Date(),
       updatedAt: new Date(),
     }),
@@ -96,6 +102,7 @@ const buildDependencies = () => {
       updatedAt: new Date(),
     }),
     countByUser: jest.fn().mockResolvedValue(0),
+    countByUserInRange: jest.fn().mockResolvedValue(0),
     getUploadedBytesByUserInRange: jest.fn().mockResolvedValue(0),
     findExpired: jest.fn(),
     deleteByIds: jest.fn(),

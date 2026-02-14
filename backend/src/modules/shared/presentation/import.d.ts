@@ -23,6 +23,7 @@ declare module 'express-serve-static-core' {
     parsedQuery?: unknown;
     parsedParams?: unknown;
     parsedBody?: unknown;
+    rawBody?: string;
   }
 }
 

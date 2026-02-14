@@ -67,7 +67,14 @@ app.use(
 
 // parse body params and attache them to req.body
 app.use(express.urlencoded({ extended: true, limit: BODY_LIMIT }));
-app.use(express.json({ limit: BODY_LIMIT }));
+app.use(
+  express.json({
+    limit: BODY_LIMIT,
+    verify: (request, _response, buffer) => {
+      (request as express.Request).rawBody = buffer.toString('utf8');
+    },
+  })
+);
 
 // Parse query strings using qs library
 app.set('query parser', (str: string) => qs.parse(str));

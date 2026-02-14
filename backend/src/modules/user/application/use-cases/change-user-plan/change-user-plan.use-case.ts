@@ -3,6 +3,7 @@ import { ChangeUserPlanRequestDto } from './change-user-plan.dto';
 import { AuditActions } from '@/modules/audit/application/audit.actions';
 import { buildAuditEntity } from '@/modules/audit/application/audit.entity';
 import { IAuditLogService } from '@/modules/audit/application/services/audit-log.service.interface';
+import { IBillingService } from '@/modules/billing/application/services/billing.service.interface';
 import { IPlanQueryRepository } from '@/modules/plan/application/repositories/plan.query.repository.interface';
 import {
   NotFoundError,
@@ -32,23 +33,58 @@ export class ChangeUserPlanUseCase implements UseCase<
     private readonly userRepository: IUserRepository,
     private readonly userQueryRepository: IUserQueryRepository,
     private readonly planQueryRepository: IPlanQueryRepository,
+    private readonly billingService: IBillingService,
     private readonly systemLogService: ISystemLogService,
     private readonly auditLogService: IAuditLogService
   ) {}
+
+  private parseRequestedScheduleAt(scheduleAt?: string): Result<Date | null, ValidationError> {
+    if (!scheduleAt) {
+      return Result.ok(null);
+    }
+
+    const parsed = new Date(scheduleAt);
+    if (Number.isNaN(parsed.getTime())) {
+      return Result.fail(new ValidationError('scheduleAt must be a valid ISO date'));
+    }
+
+    return Result.ok(parsed);
+  }
+
+  private isFuture(date: Date | null): date is Date {
+    return date !== null && date.getTime() > Date.now();
+  }
+
+  private resolvePlanChangeActions(effectiveAt: Date | null): {
+    systemAction: (typeof SystemActions)[keyof typeof SystemActions];
+    auditAction: (typeof AuditActions)[keyof typeof AuditActions];
+  } {
+    if (this.isFuture(effectiveAt)) {
+      return {
+        systemAction: SystemActions.USER_PLAN_SCHEDULED,
+        auditAction: AuditActions.USER_PLAN_SCHEDULED,
+      };
+    }
+
+    return {
+      systemAction: SystemActions.USER_PLAN_CHANGED,
+      auditAction: AuditActions.USER_PLAN_CHANGED,
+    };
+  }
 
   public async execute(request: ChangeUserPlanRequestDto): Promise<ChangeUserPlanResponse> {
     if (!request.planCode?.trim()) {
       return Result.fail(new ValidationError('Plan code is required'));
     }
 
-    let scheduledAt: Date | null = null;
-    if (request.scheduleAt) {
-      const parsed = new Date(request.scheduleAt);
-      if (Number.isNaN(parsed.getTime())) {
-        return Result.fail(new ValidationError('scheduleAt must be a valid ISO date'));
-      }
-      scheduledAt = parsed;
+    const requestedScheduleAtResult = this.parseRequestedScheduleAt(request.scheduleAt);
+    if (requestedScheduleAtResult.isFailure) {
+      return Result.fail(
+        requestedScheduleAtResult.error ??
+          new ValidationError('scheduleAt must be a valid ISO date')
+      );
     }
+    const requestedScheduleAt = requestedScheduleAtResult.getValue();
 
     try {
       const plan = await this.planQueryRepository.findByCode(request.planCode.trim());
@@ -61,8 +97,16 @@ export class ChangeUserPlanUseCase implements UseCase<
         return Result.fail(new NotFoundError('User not found'));
       }
 
-      if (scheduledAt && scheduledAt.getTime() > Date.now()) {
-        user.schedulePlanChange(plan.id, scheduledAt);
+      const scheduleResolution = await this.billingService.resolvePlanChangeSchedule({
+        userId: user.id,
+        currentPlanId: user.planId,
+        targetPlanId: plan.id,
+        requestedScheduleAt,
+      });
+
+      const effectiveAt = scheduleResolution.effectiveAt;
+      if (this.isFuture(effectiveAt)) {
+        user.schedulePlanChange(plan.id, effectiveAt);
       } else {
         user.changePlan(plan.id);
       }
@@ -73,25 +117,28 @@ export class ChangeUserPlanUseCase implements UseCase<
         return Result.fail(new NotFoundError('User not found'));
       }
 
+      const { systemAction, auditAction } = this.resolvePlanChangeActions(effectiveAt);
       await this.systemLogService.log({
         level: 'info',
-        action: scheduledAt ? SystemActions.USER_PLAN_SCHEDULED : SystemActions.USER_PLAN_CHANGED,
+        action: systemAction,
         userId: user.id,
         metadata: {
           planId: plan.id,
           planCode: plan.code,
-          scheduleAt: scheduledAt?.toISOString() ?? null,
+          scheduleAt: effectiveAt?.toISOString() ?? null,
+          scheduleReason: scheduleResolution.reason,
         },
       });
 
       await this.auditLogService.log({
-        action: scheduledAt ? AuditActions.USER_PLAN_SCHEDULED : AuditActions.USER_PLAN_CHANGED,
+        action: auditAction,
         actorUserId: user.id,
         ...buildAuditEntity('user', user.id),
         metadata: {
           planId: plan.id,
           planCode: plan.code,
-          scheduleAt: scheduledAt?.toISOString() ?? null,
+          scheduleAt: effectiveAt?.toISOString() ?? null,
+          scheduleReason: scheduleResolution.reason,
         },
       });
 

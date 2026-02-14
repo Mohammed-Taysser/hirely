@@ -11,8 +11,11 @@ describe('EvaluateExportFailureAlertsUseCase', () => {
         [SystemActions.EXPORT_EMAIL_SENT]: 10,
         [SystemActions.EXPORT_EMAIL_FAILED]: 2,
       }),
+      getActionCountsByReason: jest.fn(),
+      countByUserAndActionInRange: jest.fn(),
       hasActionSince: jest.fn().mockResolvedValue(false),
       findFailedExportEmailJobs: jest.fn(),
+      findFailedExportEmailJobById: jest.fn(),
     };
 
     const systemLogService = {

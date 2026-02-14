@@ -77,6 +77,9 @@ async function createPlan(req: Request, response: Response) {
         maxResumes: body.limits.maxResumes,
         maxExports: body.limits.maxExports,
         dailyUploadMb: body.limits.dailyUploadMb,
+        dailyExports: body.limits.dailyExports,
+        dailyExportEmails: body.limits.dailyExportEmails,
+        dailyBulkApplies: body.limits.dailyBulkApplies,
       },
     },
   });
@@ -111,6 +114,9 @@ async function updatePlan(req: Request, response: Response) {
               maxResumes: body.limits.maxResumes,
               maxExports: body.limits.maxExports,
               dailyUploadMb: body.limits.dailyUploadMb,
+              dailyExports: body.limits.dailyExports,
+              dailyExportEmails: body.limits.dailyExportEmails,
+              dailyBulkApplies: body.limits.dailyBulkApplies,
             },
           }
         : undefined,

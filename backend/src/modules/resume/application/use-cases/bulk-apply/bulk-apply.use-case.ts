@@ -5,12 +5,18 @@ import { BulkApplyRequestDto, BulkApplyResponseDto } from './bulk-apply.dto';
 import { AuditActions } from '@/modules/audit/application/audit.actions';
 import { buildAuditEntity } from '@/modules/audit/application/audit.entity';
 import { IAuditLogService } from '@/modules/audit/application/services/audit-log.service.interface';
+import {
+  hasReachedDailyBulkApplyLimit,
+  requirePlanUsageLimits,
+} from '@/modules/plan/application/policies/plan-limit.policy';
+import { IPlanLimitQueryRepository } from '@/modules/plan/application/repositories/plan-limit.query.repository.interface';
 import { IResumeSnapshotRepository } from '@/modules/resume/application/repositories/resume-snapshot.repository.interface';
 import { IBulkApplyEmailQueueService } from '@/modules/resume/application/services/bulk-apply-email-queue.service.interface';
 import { IExportQueueService } from '@/modules/resume/application/services/export-queue.service.interface';
 import { IExportService } from '@/modules/resume/application/services/export.service.interface';
 import {
   AppError,
+  ForbiddenError,
   NotFoundError,
   TooManyRequestsError,
   UnexpectedError,
@@ -19,6 +25,7 @@ import {
 import { IRateLimiter } from '@/modules/shared/application/services/rate-limiter.service.interface';
 import { UseCase } from '@/modules/shared/application/use-case.interface';
 import { Result } from '@/modules/shared/domain';
+import { ISystemLogQueryRepository } from '@/modules/system/application/repositories/system-log.query.repository.interface';
 import { ISystemLogService } from '@/modules/system/application/services/system-log.service.interface';
 import { SystemActions } from '@/modules/system/application/system.actions';
 import { IUserQueryRepository } from '@/modules/user/application/repositories/user.query.repository.interface';
@@ -30,6 +37,8 @@ export class BulkApplyUseCase implements UseCase<BulkApplyRequestDto, BulkApplyR
     private readonly exportService: IExportService,
     private readonly exportQueueService: IExportQueueService,
     private readonly resumeSnapshotRepository: IResumeSnapshotRepository,
+    private readonly planLimitQueryRepository: IPlanLimitQueryRepository,
+    private readonly systemLogQueryRepository: ISystemLogQueryRepository,
     private readonly userQueryRepository: IUserQueryRepository,
     private readonly rateLimiter: IRateLimiter,
     private readonly emailQueueService: IBulkApplyEmailQueueService,
@@ -46,6 +55,16 @@ export class BulkApplyUseCase implements UseCase<BulkApplyRequestDto, BulkApplyR
 
   private async createBatch() {
     return { batchId: randomUUID() };
+  }
+
+  private getUtcDayRange(now = new Date()) {
+    const start = new Date(now);
+    start.setUTCHours(0, 0, 0, 0);
+
+    const end = new Date(now);
+    end.setUTCHours(23, 59, 59, 999);
+
+    return { start, end };
   }
 
   public async execute(request: BulkApplyRequestDto): Promise<BulkApplyResponse> {
@@ -66,6 +85,19 @@ export class BulkApplyUseCase implements UseCase<BulkApplyRequestDto, BulkApplyR
       }
 
       this.ensureBulkApplyAllowed(user.plan.code);
+
+      const planLimit = await this.planLimitQueryRepository.findByPlanId(user.planId);
+      const usageLimits = requirePlanUsageLimits(planLimit);
+      const { start, end } = this.getUtcDayRange();
+      const dailyBulkAppliesUsed = await this.systemLogQueryRepository.countByUserAndActionInRange(
+        request.user.id,
+        SystemActions.BULK_APPLY_ENQUEUED,
+        start,
+        end
+      );
+      if (hasReachedDailyBulkApplyLimit(dailyBulkAppliesUsed, usageLimits.dailyBulkApplies)) {
+        return Result.fail(new ForbiddenError('Daily bulk apply limit reached for your plan'));
+      }
 
       await this.exportService.enforceExportLimit(request.user.id, user.planId);
 

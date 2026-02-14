@@ -26,7 +26,10 @@ describe('CreatePlanUseCase', () => {
       code: 'pro',
       name: 'Pro',
       description: 'desc',
-      limits: { maxResumes: 10, maxExports: 10, dailyUploadMb: 100 },
+      limits: { maxResumes: 10, maxExports: 10, dailyUploadMb: 100,
+        dailyExports: 10,
+        dailyExportEmails: 20,
+        dailyBulkApplies: 10 },
     });
 
     expect(result.isFailure).toBe(true);
@@ -59,7 +62,10 @@ describe('CreatePlanUseCase', () => {
       code: 'pro',
       name: 'Pro',
       description: 'desc',
-      limits: { maxResumes: 10, maxExports: 10, dailyUploadMb: 100 },
+      limits: { maxResumes: 10, maxExports: 10, dailyUploadMb: 100,
+        dailyExports: 10,
+        dailyExportEmails: 20,
+        dailyBulkApplies: 10 },
     });
 
     expect(result.isSuccess).toBe(true);
@@ -93,7 +99,10 @@ describe('CreatePlanUseCase', () => {
       code: 'pro',
       name: 'Pro',
       description: 'desc',
-      limits: { maxResumes: 10, maxExports: 10, dailyUploadMb: 100 },
+      limits: { maxResumes: 10, maxExports: 10, dailyUploadMb: 100,
+        dailyExports: 10,
+        dailyExportEmails: 20,
+        dailyBulkApplies: 10 },
     });
 
     expect(result.isFailure).toBe(true);
@@ -126,7 +135,10 @@ describe('CreatePlanUseCase', () => {
       code: 'pro',
       name: 'Pro',
       description: 'desc',
-      limits: { maxResumes: 10, maxExports: 10, dailyUploadMb: 100 },
+      limits: { maxResumes: 10, maxExports: 10, dailyUploadMb: 100,
+        dailyExports: 10,
+        dailyExportEmails: 20,
+        dailyBulkApplies: 10 },
     });
 
     expect(result.isFailure).toBe(true);
