@@ -8,6 +8,7 @@ export interface ExportRecord {
   userId: string;
   status: ExportStatus;
   url: string | null;
+  sizeBytes: number | null;
   error: string | null;
   expiresAt: Date | null;
   createdAt: Date;
@@ -16,7 +17,12 @@ export interface ExportRecord {
 
 export interface IExportService {
   createExportRecord(userId: string, snapshotId: string): Promise<ExportRecord>;
-  markReady(exportId: string, storageKey: string, planCode: string): Promise<ExportRecord>;
+  markReady(
+    exportId: string,
+    storageKey: string,
+    sizeBytes: number,
+    planCode: string
+  ): Promise<ExportRecord>;
   markFailed(exportId: string, reason: string): Promise<ExportRecord>;
   enforceExportLimit(userId: string, planId: string): Promise<void>;
   getExportStatus(userId: string, exportId: string): Promise<ExportStatusResult>;

@@ -147,6 +147,40 @@ describe('apps/config', () => {
     exitSpy.mockRestore();
   });
 
+  it('exits when production smtp config is missing', () => {
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const exitSpy = jest.spyOn(process, 'exit').mockImplementation((() => {
+      throw new Error('process.exit called');
+    }) as never);
+
+    process.env = {
+      ...process.env,
+      ...requiredEnv,
+      NODE_ENV: 'production',
+      ALLOWED_ORIGINS: 'https://example.com',
+      SMTP_HOST: '',
+      SMTP_USER: '',
+      SMTP_PASS: '',
+      SMTP_PORT: '',
+    };
+
+    const dotenvConfigMock = jest.fn();
+    jest.doMock('dotenv', () => ({
+      __esModule: true,
+      config: (...args: unknown[]) => dotenvConfigMock(...args),
+    }));
+
+    expect(() => {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      require('@dist/apps/config');
+    }).toThrow('process.exit called');
+
+    expect(errorSpy).toHaveBeenCalled();
+    expect(exitSpy).toHaveBeenCalledWith(1);
+    errorSpy.mockRestore();
+    exitSpy.mockRestore();
+  });
+
   it('logs non-zod validation errors and exits', () => {
     const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
     const exitSpy = jest.spyOn(process, 'exit').mockImplementation((() => {
@@ -171,7 +205,9 @@ describe('apps/config', () => {
       z: {
         ...actualZod.z,
         object: () => ({
-          safeParse: (...args: unknown[]) => fakeSafeParse(...args),
+          superRefine: () => ({
+            safeParse: (...args: unknown[]) => fakeSafeParse(...args),
+          }),
         }),
       },
     }));

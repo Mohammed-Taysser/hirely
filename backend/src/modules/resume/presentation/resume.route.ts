@@ -23,6 +23,20 @@ resumeRoutes.get(
 );
 
 resumeRoutes.get(
+  '/exports/failed',
+  authenticateMiddleware,
+  validateRequest(resumeDTO.getFailedExports),
+  controller.getFailedExports
+);
+
+resumeRoutes.get(
+  '/exports/failed-emails',
+  authenticateMiddleware,
+  validateRequest(resumeDTO.getFailedExportEmailJobs),
+  controller.getFailedExportEmailJobs
+);
+
+resumeRoutes.get(
   '/:resumeId',
   authenticateMiddleware,
   validateRequest(resumeDTO.getResumeById),

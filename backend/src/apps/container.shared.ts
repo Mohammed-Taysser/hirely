@@ -1,3 +1,4 @@
+import CONFIG from '@/apps/config';
 import { ActivityService } from '@/modules/activity/infrastructure/services/activity.service';
 import { PrismaAuditLogQueryRepository } from '@/modules/audit/infrastructure/persistence/prisma-audit-log.query.repository';
 import { PrismaAuditLogService } from '@/modules/audit/infrastructure/services/prisma-audit-log.service';
@@ -18,10 +19,12 @@ import { BullmqExportQueueService } from '@/modules/resume/infrastructure/servic
 import { GotenbergPdfRenderer } from '@/modules/resume/infrastructure/services/gotenberg-pdf-renderer.service';
 import { LocalExportStorageService } from '@/modules/resume/infrastructure/services/local-export-storage.service';
 import { ResumeTemplateRenderer } from '@/modules/resume/infrastructure/services/resume-template-renderer.service';
+import { S3ExportStorageService } from '@/modules/resume/infrastructure/services/s3-export-storage.service';
 import { ResumeTemplateService } from '@/modules/resumeTemplate/infrastructure/services/resume-template.service';
 import { RedisRateLimiter } from '@/modules/shared/infrastructure/rate-limiter/redis-rate-limiter.service';
 import passwordHasherService from '@/modules/shared/infrastructure/services/password-hasher.service';
 import tokenService from '@/modules/shared/infrastructure/services/token.service';
+import { PrismaSystemLogQueryRepository } from '@/modules/system/infrastructure/persistence/prisma-system-log.query.repository';
 import { OsSystemHealthService } from '@/modules/system/infrastructure/services/os-system-health.service';
 import { PrismaSystemLogService } from '@/modules/system/infrastructure/services/prisma-system-log.service';
 import { PrismaUserPlanChangeRepository } from '@/modules/user/infrastructure/persistence/prisma-user-plan-change.repository';
@@ -40,13 +43,17 @@ const resumeSnapshotRepository = new PrismaResumeSnapshotRepository();
 const resumeSnapshotQueryRepository = new PrismaResumeSnapshotQueryRepository();
 const resumeExportQueryRepository = new PrismaResumeExportQueryRepository();
 const resumeExportRepository = new PrismaResumeExportRepository();
-const exportStorage = new LocalExportStorageService();
+const exportStorage =
+  CONFIG.EXPORT_STORAGE_DRIVER === 's3'
+    ? new S3ExportStorageService(CONFIG)
+    : new LocalExportStorageService();
 const pdfRenderer = new GotenbergPdfRenderer();
 const resumeTemplateRenderer = new ResumeTemplateRenderer();
 const exportEmailQueueService = new BullmqExportEmailQueueService();
 const billingService = new BillingService();
 const activityService = new ActivityService();
 const systemLogService = new PrismaSystemLogService();
+const systemLogQueryRepository = new PrismaSystemLogQueryRepository();
 const auditLogService = new PrismaAuditLogService();
 const auditLogQueryRepository = new PrismaAuditLogQueryRepository();
 
@@ -98,6 +105,7 @@ export {
   resumeTemplateService,
   systemHealthService,
   systemLogService,
+  systemLogQueryRepository,
   tokenService,
   userQueryRepository,
   userPlanChangeRepository,

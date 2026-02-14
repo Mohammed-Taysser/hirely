@@ -17,6 +17,8 @@ const {
   getResumeByIdQueryUseCase,
   getResumeSnapshotsUseCase,
   getResumeExportsUseCase,
+  getFailedExportsUseCase,
+  getFailedExportEmailJobsUseCase,
   getExportStatusUseCase,
   getResumeExportStatusUseCase,
   exportResumeUseCase,
@@ -149,6 +151,62 @@ async function getResumeExports(req: Request, response: Response) {
       page,
       limit,
       totalPages: Math.ceil(total / limit),
+    },
+  });
+}
+
+async function getFailedExports(req: Request, response: Response) {
+  const request = req as TypedAuthenticatedRequest<ResumeDTO['getFailedExports']>;
+  const query = request.parsedQuery;
+
+  const result = await getFailedExportsUseCase.execute({
+    userId: request.user.id,
+    page: query.page,
+    limit: query.limit,
+  });
+
+  if (result.isFailure) {
+    throw mapAppErrorToHttp(result.error);
+  }
+
+  const { exports, total } = result.getValue();
+
+  responseService.paginated(response, {
+    message: 'Failed exports fetched successfully',
+    data: exports,
+    metadata: {
+      total,
+      page: query.page,
+      limit: query.limit,
+      totalPages: Math.ceil(total / query.limit),
+    },
+  });
+}
+
+async function getFailedExportEmailJobs(req: Request, response: Response) {
+  const request = req as TypedAuthenticatedRequest<ResumeDTO['getFailedExportEmailJobs']>;
+  const query = request.parsedQuery;
+
+  const result = await getFailedExportEmailJobsUseCase.execute({
+    userId: request.user.id,
+    page: query.page,
+    limit: query.limit,
+  });
+
+  if (result.isFailure) {
+    throw mapAppErrorToHttp(result.error);
+  }
+
+  const { jobs, total } = result.getValue();
+
+  responseService.paginated(response, {
+    message: 'Failed export email jobs fetched successfully',
+    data: jobs,
+    metadata: {
+      total,
+      page: query.page,
+      limit: query.limit,
+      totalPages: Math.ceil(total / query.limit),
     },
   });
 }
@@ -333,6 +391,8 @@ const resumeController = {
   getResumeById,
   getResumeSnapshots,
   getResumeExports,
+  getFailedExports,
+  getFailedExportEmailJobs,
   getExportStatus,
   exportResume,
   enqueueExport,

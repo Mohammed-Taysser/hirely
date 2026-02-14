@@ -7,6 +7,7 @@ export interface ResumeExportDto {
   userId: string;
   status: ExportStatus;
   url: string | null;
+  sizeBytes: number | null;
   error: string | null;
   expiresAt: Date | null;
   createdAt: Date;
@@ -25,6 +26,11 @@ export interface IResumeExportQueryRepository {
     page: number,
     limit: number,
     filters: ResumeExportQueryFilters
+  ): Promise<[ResumeExportDto[], number]>;
+  getFailedExportsByUser(
+    userId: string,
+    page: number,
+    limit: number
   ): Promise<[ResumeExportDto[], number]>;
   findById(userId: string, exportId: string): Promise<ResumeExportDto | null>;
   findByIdForResume(

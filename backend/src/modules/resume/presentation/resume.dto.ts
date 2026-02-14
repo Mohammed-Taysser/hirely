@@ -87,6 +87,14 @@ const getResumeExportsSchema = {
   }),
 };
 
+const getFailedExportsSchema = {
+  query: basePaginationSchema,
+};
+
+const getFailedExportEmailJobsSchema = {
+  query: basePaginationSchema,
+};
+
 const exportResumeSchema = {
   params: getResumeByIdSchema.params,
 };
@@ -146,6 +154,8 @@ const resumeDTO = {
   getResumeById: getResumeByIdSchema,
   getResumeSnapshots: getResumeSnapshotsSchema,
   getResumeExports: getResumeExportsSchema,
+  getFailedExports: getFailedExportsSchema,
+  getFailedExportEmailJobs: getFailedExportEmailJobsSchema,
   exportStatus: exportStatusSchema,
   exportResume: exportResumeSchema,
   enqueueExport: enqueueExportSchema,
@@ -160,6 +170,8 @@ export type ResumeDTO = {
   getResumeById: typeof getResumeByIdSchema;
   getResumeSnapshots: typeof getResumeSnapshotsSchema;
   getResumeExports: typeof getResumeExportsSchema;
+  getFailedExports: typeof getFailedExportsSchema;
+  getFailedExportEmailJobs: typeof getFailedExportEmailJobsSchema;
   exportStatus: typeof exportStatusSchema;
   exportResume: typeof exportResumeSchema;
   enqueueExport: typeof enqueueExportSchema;

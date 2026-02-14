@@ -91,6 +91,7 @@ model ResumeExport {
   userId     String
 
   url       String?
+  sizeBytes Int?
   expiresAt DateTime?
   status    ExportStatus @default(PENDING)
   error     String?

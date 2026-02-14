@@ -27,12 +27,20 @@ export const startPdfWorker = () => {
         snapshotId: string;
         userId: string;
       };
+      const correlationId = `pdf:${job.id}`;
 
       await logSystem({
         level: 'info',
         action: SystemActions.EXPORT_PDF_PROCESSING,
         userId,
-        metadata: { jobId: job.id, exportId, snapshotId },
+        metadata: {
+          jobId: job.id,
+          exportId,
+          snapshotId,
+          correlationId,
+          attemptsMade: job.attemptsMade,
+          attemptsStarted: job.attemptsStarted,
+        },
       });
 
       const result = await processExportPdfUseCase.execute({ exportId, snapshotId, userId });
@@ -42,7 +50,14 @@ export const startPdfWorker = () => {
           level: 'error',
           action: SystemActions.EXPORT_PDF_FAILED,
           userId,
-          metadata: { jobId: job.id, exportId, snapshotId },
+          metadata: {
+            jobId: job.id,
+            exportId,
+            snapshotId,
+            correlationId,
+            attemptsMade: job.attemptsMade,
+            attemptsStarted: job.attemptsStarted,
+          },
           message: error.message,
         });
         throw new Error(error.message);
@@ -52,7 +67,14 @@ export const startPdfWorker = () => {
         level: 'info',
         action: SystemActions.EXPORT_PDF_PROCESSED,
         userId,
-        metadata: { jobId: job.id, exportId, snapshotId },
+        metadata: {
+          jobId: job.id,
+          exportId,
+          snapshotId,
+          correlationId,
+          attemptsMade: job.attemptsMade,
+          attemptsStarted: job.attemptsStarted,
+        },
       });
     },
     {
@@ -71,10 +93,22 @@ export const startPdfWorker = () => {
     })
     .on('failed', (job, err) => {
       logger.error('PDF worker failed', { error: err });
+      const jobData = (job?.data ?? {}) as Record<string, unknown>;
+      const userId = typeof jobData.userId === 'string' ? jobData.userId : undefined;
       logSystem({
         level: 'error',
         action: SystemActions.WORKER_PDF_FAILED,
-        metadata: { jobId: job?.id },
+        userId,
+        metadata: {
+          jobId: job?.id,
+          correlationId: job?.id ? `pdf:${job.id}` : undefined,
+          exportId: jobData.exportId,
+          userId: jobData.userId,
+          attemptsMade: job?.attemptsMade,
+          attemptsStarted: job?.attemptsStarted,
+          failedReason: err.message,
+          stacktrace: err.stack ?? null,
+        },
         message: err.message,
       });
     });

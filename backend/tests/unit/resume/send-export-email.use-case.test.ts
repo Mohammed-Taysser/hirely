@@ -32,7 +32,10 @@ describe('SendExportEmailUseCase', () => {
       getPaginatedUsers: jest.fn(),
       getBasicUsers: jest.fn(),
     },
-    storageService: { getSignedDownloadUrl: jest.fn().mockResolvedValue('https://cdn/file.pdf') },
+    storageService: {
+      getSignedDownloadUrl: jest.fn().mockResolvedValue('https://cdn/file.pdf'),
+      deleteObject: jest.fn(),
+    },
     activityService: { log: jest.fn().mockResolvedValue(undefined) },
   });
 

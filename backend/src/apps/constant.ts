@@ -54,6 +54,7 @@ const QUEUE_NAMES = {
   pdf: 'pdf-generation',
   email: 'email-delivery',
   planChanges: 'plan-changes',
+  exportCleanup: 'export-cleanup',
 };
 
 export { BODY_LIMIT, QUEUE_NAMES, RATE_LIMITS };

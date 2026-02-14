@@ -29,12 +29,21 @@ export const startEmailWorker = () => {
         recipient?: { name?: string; company?: string; message?: string };
         reason: 'free-tier-export' | 'bulk-apply';
       };
+      const correlationId = `email:${job.id}`;
 
       await logSystem({
         level: 'info',
         action: SystemActions.EXPORT_EMAIL_PROCESSING,
         userId,
-        metadata: { jobId: job.id, exportId, to, reason },
+        metadata: {
+          jobId: job.id,
+          exportId,
+          to,
+          reason,
+          correlationId,
+          attemptsMade: job.attemptsMade,
+          attemptsStarted: job.attemptsStarted,
+        },
       });
 
       const result = await sendExportEmailUseCase.execute({
@@ -51,7 +60,15 @@ export const startEmailWorker = () => {
           level: 'error',
           action: SystemActions.EXPORT_EMAIL_FAILED,
           userId,
-          metadata: { jobId: job.id, exportId, to, reason },
+          metadata: {
+            jobId: job.id,
+            exportId,
+            to,
+            reason,
+            correlationId,
+            attemptsMade: job.attemptsMade,
+            attemptsStarted: job.attemptsStarted,
+          },
           message: error.message,
         });
         throw new Error(error.message);
@@ -61,7 +78,15 @@ export const startEmailWorker = () => {
         level: 'info',
         action: SystemActions.EXPORT_EMAIL_SENT,
         userId,
-        metadata: { jobId: job.id, exportId, to, reason },
+        metadata: {
+          jobId: job.id,
+          exportId,
+          to,
+          reason,
+          correlationId,
+          attemptsMade: job.attemptsMade,
+          attemptsStarted: job.attemptsStarted,
+        },
       });
     },
     {
@@ -79,10 +104,22 @@ export const startEmailWorker = () => {
       });
     })
     .on('failed', (job, err) => {
+      const jobData = (job?.data ?? {}) as Record<string, unknown>;
+      const userId = typeof jobData.userId === 'string' ? jobData.userId : undefined;
       logSystem({
         level: 'error',
         action: SystemActions.WORKER_EMAIL_FAILED,
-        metadata: { jobId: job?.id },
+        userId,
+        metadata: {
+          jobId: job?.id,
+          correlationId: job?.id ? `email:${job.id}` : undefined,
+          exportId: jobData.exportId,
+          userId: jobData.userId,
+          attemptsMade: job?.attemptsMade,
+          attemptsStarted: job?.attemptsStarted,
+          failedReason: err.message,
+          stacktrace: err.stack ?? null,
+        },
         message: err.message,
       });
     });

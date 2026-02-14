@@ -39,6 +39,14 @@ export const SystemActions = {
   PLAN_WORKER_READY: 'plan.worker.ready',
   PLAN_WORKER_RUN_FAILED: 'plan.worker.run.failed',
 
+  EXPORT_CLEANUP_SCHEDULED: 'export.cleanup.scheduled',
+  EXPORT_CLEANUP_SCHEDULE_FAILED: 'export.cleanup.schedule.failed',
+  EXPORT_CLEANUP_RUN_STARTED: 'export.cleanup.run.started',
+  EXPORT_CLEANUP_RUN_COMPLETED: 'export.cleanup.run.completed',
+  EXPORT_CLEANUP_RUN_FAILED: 'export.cleanup.run.failed',
+  WORKER_EXPORT_CLEANUP_READY: 'worker.export.cleanup.ready',
+  WORKER_EXPORT_CLEANUP_FAILED: 'worker.export.cleanup.failed',
+
   EXPORT_PDF_PROCESSING: 'export.pdf.processing',
   EXPORT_PDF_PROCESSED: 'export.pdf.processed',
   EXPORT_PDF_FAILED: 'export.pdf.failed',

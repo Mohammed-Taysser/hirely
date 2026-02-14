@@ -49,6 +49,7 @@ export class PrismaResumeExportQueryRepository implements IResumeExportQueryRepo
           userId: true,
           status: true,
           url: true,
+          sizeBytes: true,
           error: true,
           expiresAt: true,
           createdAt: true,
@@ -68,12 +69,47 @@ export class PrismaResumeExportQueryRepository implements IResumeExportQueryRepo
         userId: true,
         status: true,
         url: true,
+        sizeBytes: true,
         error: true,
         expiresAt: true,
         createdAt: true,
         updatedAt: true,
       },
     });
+  }
+
+  async getFailedExportsByUser(
+    userId: string,
+    page: number,
+    limit: number
+  ): Promise<[ResumeExportDto[], number]> {
+    const skip = (page - 1) * limit;
+    const where: Prisma.ResumeExportWhereInput = {
+      userId,
+      status: 'FAILED',
+    };
+
+    return prisma.$transaction([
+      prisma.resumeExport.findMany({
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        where,
+        select: {
+          id: true,
+          snapshotId: true,
+          userId: true,
+          status: true,
+          url: true,
+          sizeBytes: true,
+          error: true,
+          expiresAt: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      }),
+      prisma.resumeExport.count({ where }),
+    ]);
   }
 
   async findByIdForResume(
@@ -89,6 +125,7 @@ export class PrismaResumeExportQueryRepository implements IResumeExportQueryRepo
         userId: true,
         status: true,
         url: true,
+        sizeBytes: true,
         error: true,
         expiresAt: true,
         createdAt: true,

@@ -51,10 +51,15 @@ export class ExportService implements IExportService {
     return this.resumeExportRepository.create(userId, snapshotId);
   }
 
-  async markReady(exportId: string, storageKey: string, planCode: string): Promise<ExportRecord> {
+  async markReady(
+    exportId: string,
+    storageKey: string,
+    sizeBytes: number,
+    planCode: string
+  ): Promise<ExportRecord> {
     const expiresAt = new Date(Date.now() + daysToMs(getExportExpiryDays(planCode)));
 
-    return this.resumeExportRepository.markReady(exportId, storageKey, expiresAt);
+    return this.resumeExportRepository.markReady(exportId, storageKey, sizeBytes, expiresAt);
   }
 
   async enforceExportLimit(userId: string, planId: string): Promise<void> {
@@ -152,7 +157,7 @@ export class ExportService implements IExportService {
       contentDisposition: `attachment; filename="resume-${exportRecord.id}.pdf"`,
     });
 
-    await this.markReady(exportRecord.id, upload.key, user.plan.code);
+    await this.markReady(exportRecord.id, upload.key, pdfBuffer.length, user.plan.code);
 
     return { exportRecordId: exportRecord.id, pdfBuffer, storageKey: upload.key };
   }
@@ -229,7 +234,7 @@ export class ExportService implements IExportService {
         contentDisposition: `attachment; filename="resume-${exportId}.pdf"`,
       });
 
-      await this.markReady(exportId, upload.key, user.plan?.code ?? 'FREE');
+      await this.markReady(exportId, upload.key, pdfBuffer.length, user.plan?.code ?? 'FREE');
       await this.activityService.log(userId, 'resume.exported', {
         exportId,
         snapshotId,

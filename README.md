@@ -24,6 +24,7 @@ Hirely is a resume builder and export service with plan-based limits and backgro
 Docs:
 
 - `backend/docs/APP_OVERVIEW.md`
+- `backend/docs/EXPORT_OPERATIONS.md`
 - `backend/docs/PLAN_CHANGES.md`
 - `backend/docs/AUDIT_LOGS.md`
 - `backend/docs/ddd/domain-layer.md`
@@ -84,6 +85,12 @@ Workers
 - `GOTENBERG_URL`
 - `MAX_RESUME_SECTIONS`
 - `PLAN_CHANGE_INTERVAL_SECONDS`
+- `EXPORT_CLEANUP_INTERVAL_SECONDS`
+- `EXPORT_CLEANUP_BATCH_SIZE`
+- `EXPORT_JOB_ATTEMPTS`
+- `EXPORT_JOB_BACKOFF_MS`
+- `EXPORT_JOB_KEEP_COMPLETED`
+- `EXPORT_JOB_KEEP_FAILED`
 
 Optional:
 

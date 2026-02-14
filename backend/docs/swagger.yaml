@@ -59,6 +59,32 @@ paths:
                       data:
                         $ref: '#/components/schemas/HealthStatus'
 
+  /metrics/export-ops:
+    get:
+      tags: [System]
+      summary: Export operation metrics
+      parameters:
+        - name: hours
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 720
+            default: 24
+      responses:
+        '200':
+          description: Export operation counters for the requested timeframe
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ExportOpsMetrics'
+
   /audit-logs:
     get:
       tags: [Audit]
@@ -906,6 +932,36 @@ paths:
                       data:
                         $ref: '#/components/schemas/ExportStatusResponse'
 
+  /resumes/exports/failed:
+    get:
+      tags: [Exports]
+      summary: Get failed export jobs for current user
+      parameters:
+        - $ref: '#/components/parameters/PageParameter'
+        - $ref: '#/components/parameters/LimitParameter'
+      responses:
+        '200':
+          description: Failed exports
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResumeExportsResponse'
+
+  /resumes/exports/failed-emails:
+    get:
+      tags: [Exports]
+      summary: Get failed export email jobs for current user
+      parameters:
+        - $ref: '#/components/parameters/PageParameter'
+        - $ref: '#/components/parameters/LimitParameter'
+      responses:
+        '200':
+          description: Failed export email jobs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedFailedExportEmailJobsResponse'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1195,6 +1251,35 @@ components:
                     hasPrev:
                       type: boolean
 
+    PaginatedFailedExportEmailJobsResponse:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/FailedExportEmailJob'
+                metadata:
+                  type: object
+                  properties:
+                    total:
+                      type: integer
+                    page:
+                      type: integer
+                    limit:
+                      type: integer
+                    totalPages:
+                      type: integer
+                    hasNext:
+                      type: boolean
+                    hasPrev:
+                      type: boolean
+
     PaginatedAuditLogsResponse:
       type: object
       allOf:
@@ -1243,6 +1328,30 @@ components:
         downloadUrl:
           type: string
           nullable: true
+
+    ExportOpsMetrics:
+      type: object
+      properties:
+        timeframeHours:
+          type: integer
+        since:
+          type: string
+          format: date-time
+        counters:
+          type: object
+          properties:
+            pdfProcessed:
+              type: integer
+            pdfFailed:
+              type: integer
+            emailSent:
+              type: integer
+            emailFailed:
+              type: integer
+            cleanupCompleted:
+              type: integer
+            cleanupFailed:
+              type: integer
 
     AuthResponse:
       type: object
@@ -1411,6 +1520,9 @@ components:
         url:
           type: string
           nullable: true
+        sizeBytes:
+          type: integer
+          nullable: true
         expiresAt:
           type: string
           format: date-time
@@ -1419,6 +1531,24 @@ components:
           type: string
           format: date-time
         updatedAt:
+          type: string
+          format: date-time
+
+    FailedExportEmailJob:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        action:
+          type: string
+        message:
+          type: string
+          nullable: true
+        metadata:
+          type: object
+          nullable: true
+        createdAt:
           type: string
           format: date-time
 

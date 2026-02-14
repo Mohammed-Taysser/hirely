@@ -179,7 +179,7 @@ describe('email.worker', () => {
     expect(systemLog).toHaveBeenCalledWith(
       expect.objectContaining({
         action: SystemActions.WORKER_EMAIL_COMPLETED,
-        metadata: { jobId: 'job-1', exportId: 'export-1' },
+        metadata: expect.objectContaining({ jobId: 'job-1', exportId: 'export-1' }),
       })
     );
   });
@@ -207,7 +207,7 @@ describe('email.worker', () => {
     expect(systemLog).toHaveBeenCalledWith(
       expect.objectContaining({
         action: SystemActions.WORKER_EMAIL_FAILED,
-        metadata: { jobId: undefined },
+        metadata: expect.objectContaining({ jobId: undefined }),
         message: 'worker failed without job',
       })
     );

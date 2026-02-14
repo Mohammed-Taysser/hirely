@@ -15,4 +15,5 @@ export interface IExportStorageService {
     options: ExportStorageUploadOptions
   ): Promise<ExportStorageUploadResult>;
   getSignedDownloadUrl(key: string, expiresInSeconds: number): Promise<string>;
+  deleteObject(key: string): Promise<void>;
 }

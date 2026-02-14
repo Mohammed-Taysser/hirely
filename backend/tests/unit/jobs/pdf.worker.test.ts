@@ -178,7 +178,7 @@ describe('pdf.worker', () => {
     expect(systemLog).toHaveBeenCalledWith(
       expect.objectContaining({
         action: SystemActions.WORKER_PDF_COMPLETED,
-        metadata: { jobId: 'job-1', exportId: 'export-1' },
+        metadata: expect.objectContaining({ jobId: 'job-1', exportId: 'export-1' }),
       })
     );
   });
@@ -201,7 +201,7 @@ describe('pdf.worker', () => {
     expect(systemLog).toHaveBeenCalledWith(
       expect.objectContaining({
         action: SystemActions.WORKER_PDF_FAILED,
-        metadata: { jobId: undefined },
+        metadata: expect.objectContaining({ jobId: undefined }),
         message: 'worker failure without job',
       })
     );

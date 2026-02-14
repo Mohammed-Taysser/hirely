@@ -77,6 +77,7 @@ See layer docs:
 
 - PDF worker: `backend/src/jobs/workers/pdf.worker.ts`
 - Email worker: `backend/src/jobs/workers/email.worker.ts`
+- Export cleanup worker: `backend/src/jobs/workers/export-cleanup.worker.ts`
 - Export queue interface: `backend/src/modules/resume/application/services/export-queue.service.interface.ts`
 - Email queue interface: `backend/src/modules/resume/application/services/export-email-queue.service.interface.ts`
 

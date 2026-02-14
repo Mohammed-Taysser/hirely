@@ -50,4 +50,18 @@ export class LocalExportStorageService implements IExportStorageService {
 
     return localUrl;
   }
+
+  async deleteObject(key: string): Promise<void> {
+    const safeKey = sanitizeKey(key);
+    const fullPath = path.join(uploadsDir, safeKey);
+    try {
+      await fs.unlink(fullPath);
+    } catch (error) {
+      const isMissingFile = (error as NodeJS.ErrnoException)?.code === 'ENOENT';
+
+      if (!isMissingFile) {
+        throw error;
+      }
+    }
+  }
 }

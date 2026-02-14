@@ -13,6 +13,7 @@ import {
   userQueryRepository,
   planLimitQueryRepository,
   resumeExportQueryRepository,
+  systemLogQueryRepository,
 } from '@/apps/container.shared';
 import { BulkApplyUseCase } from '@/modules/resume/application/use-cases/bulk-apply/bulk-apply.use-case';
 import { CreateResumeUseCase } from '@/modules/resume/application/use-cases/create-resume/create-resume.use-case';
@@ -20,6 +21,8 @@ import { DeleteResumeUseCase } from '@/modules/resume/application/use-cases/dele
 import { EnqueueResumeExportUseCase } from '@/modules/resume/application/use-cases/enqueue-resume-export/enqueue-resume-export.use-case';
 import { ExportResumeUseCase } from '@/modules/resume/application/use-cases/export-resume/export-resume.use-case';
 import { GetExportStatusUseCase } from '@/modules/resume/application/use-cases/get-export-status/get-export-status.use-case';
+import { GetFailedExportEmailJobsUseCase } from '@/modules/resume/application/use-cases/get-failed-export-email-jobs/get-failed-export-email-jobs.use-case';
+import { GetFailedExportsUseCase } from '@/modules/resume/application/use-cases/get-failed-exports/get-failed-exports.use-case';
 import { GetResumeByIdQueryUseCase } from '@/modules/resume/application/use-cases/get-resume-by-id-query/get-resume-by-id-query.use-case';
 import { GetResumeExportStatusUseCase } from '@/modules/resume/application/use-cases/get-resume-export-status/get-resume-export-status.use-case';
 import { GetResumeExportsUseCase } from '@/modules/resume/application/use-cases/get-resume-exports/get-resume-exports.use-case';
@@ -61,6 +64,10 @@ const setDefaultResumeUseCase = new SetDefaultResumeUseCase(
 const exportResumeUseCase = new ExportResumeUseCase(exportService, auditLogService);
 const getResumeByIdQueryUseCase = new GetResumeByIdQueryUseCase(resumeQueryRepository);
 const getResumeExportsUseCase = new GetResumeExportsUseCase(resumeExportQueryRepository);
+const getFailedExportsUseCase = new GetFailedExportsUseCase(resumeExportQueryRepository);
+const getFailedExportEmailJobsUseCase = new GetFailedExportEmailJobsUseCase(
+  systemLogQueryRepository
+);
 const getResumeExportStatusUseCase = new GetResumeExportStatusUseCase(exportService);
 const enqueueResumeExportUseCase = new EnqueueResumeExportUseCase(
   exportService,
@@ -93,6 +100,8 @@ const resumeContainer = {
   getResumeByIdQueryUseCase,
   getResumeSnapshotsUseCase,
   getResumeExportsUseCase,
+  getFailedExportsUseCase,
+  getFailedExportEmailJobsUseCase,
   getResumeExportStatusUseCase,
   getExportStatusUseCase,
   exportResumeUseCase,
