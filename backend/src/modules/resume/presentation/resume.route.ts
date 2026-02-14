@@ -64,6 +64,20 @@ resumeRoutes.get(
   controller.getExportStatus
 );
 
+resumeRoutes.post(
+  '/exports/:exportId/retry',
+  authenticateMiddleware,
+  validateRequest(resumeDTO.retryFailedExport),
+  controller.retryFailedExport
+);
+
+resumeRoutes.post(
+  '/exports/failed-emails/:jobId/retry',
+  authenticateMiddleware,
+  validateRequest(resumeDTO.retryFailedExportEmailJob),
+  controller.retryFailedExportEmailJob
+);
+
 resumeRoutes.get(
   '/:resumeId/export/download',
   authenticateMiddleware,

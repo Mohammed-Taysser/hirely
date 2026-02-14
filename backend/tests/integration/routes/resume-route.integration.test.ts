@@ -1,6 +1,6 @@
 import { findRouteLayer } from '../helpers/route-inspector.helper';
 
-const setup = () => {
+const setup = async () => {
   jest.resetModules();
 
   const controller = {
@@ -12,6 +12,8 @@ const setup = () => {
     getFailedExports: jest.fn(),
     getFailedExportEmailJobs: jest.fn(),
     getExportStatus: jest.fn(),
+    retryFailedExport: jest.fn(),
+    retryFailedExportEmailJob: jest.fn(),
     exportResume: jest.fn(),
     enqueueExport: jest.fn(),
     getResumeExportStatus: jest.fn(),
@@ -29,6 +31,8 @@ const setup = () => {
     getFailedExports: { name: 'getFailedExports' },
     getFailedExportEmailJobs: { name: 'getFailedExportEmailJobs' },
     exportStatus: { name: 'exportStatus' },
+    retryFailedExport: { name: 'retryFailedExport' },
+    retryFailedExportEmailJob: { name: 'retryFailedExportEmailJob' },
     exportResume: { name: 'exportResume' },
     enqueueExport: { name: 'enqueueExport' },
     getResumeExportStatus: { name: 'getResumeExportStatus' },
@@ -61,15 +65,14 @@ const setup = () => {
     default: validateRequest,
   }));
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const resumeRoutes = require('@dist/modules/resume/presentation/resume.route').default;
+  const { default: resumeRoutes } = await import('@dist/modules/resume/presentation/resume.route');
 
   return { resumeRoutes, controller, dto, authenticateMiddleware };
 };
 
 describe('resume route integration', () => {
-  it('all resume endpoints are protected and validated before controller', () => {
-    const { resumeRoutes, controller, dto, authenticateMiddleware } = setup();
+  it('all resume endpoints are protected and validated before controller', async () => {
+    const { resumeRoutes, controller, dto, authenticateMiddleware } = await setup();
 
     const checks: Array<{
       method: string;
@@ -109,6 +112,18 @@ describe('resume route integration', () => {
         path: '/exports/:exportId/status',
         schema: dto.exportStatus,
         handler: controller.getExportStatus,
+      },
+      {
+        method: 'post',
+        path: '/exports/:exportId/retry',
+        schema: dto.retryFailedExport,
+        handler: controller.retryFailedExport,
+      },
+      {
+        method: 'post',
+        path: '/exports/failed-emails/:jobId/retry',
+        schema: dto.retryFailedExportEmailJob,
+        handler: controller.retryFailedExportEmailJob,
       },
       {
         method: 'get',

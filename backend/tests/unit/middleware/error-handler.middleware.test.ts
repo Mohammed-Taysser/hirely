@@ -11,7 +11,9 @@ type Loaded = {
   };
 };
 
-const loadErrorHandler = (nodeEnv: 'development' | 'test' = 'test'): Loaded => {
+const loadErrorHandler = async (
+  nodeEnv: 'development' | 'test' = 'test'
+): Promise<Loaded> => {
   jest.resetModules();
 
   const loggerWarn = jest.fn();
@@ -28,17 +30,15 @@ const loadErrorHandler = (nodeEnv: 'development' | 'test' = 'test'): Loaded => {
     },
   }));
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const middleware = require('@dist/middleware/error-handler.middleware').default;
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const errorService = require('@dist/modules/shared/presentation/error.service').default;
+  const { default: middleware } = await import('@dist/middleware/error-handler.middleware');
+  const { default: errorService } = await import('@dist/modules/shared/presentation/error.service');
 
   return { middleware, loggerWarn, errorService };
 };
 
 describe('error-handler middleware', () => {
-  it('handles BaseError with JSON payload message', () => {
-    const { middleware, errorService } = loadErrorHandler('test');
+  it('handles BaseError with JSON payload message', async () => {
+    const { middleware, errorService } = await loadErrorHandler('test');
     const req = { originalUrl: '/api/test', method: 'GET' };
     const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
 
@@ -52,8 +52,8 @@ describe('error-handler middleware', () => {
     });
   });
 
-  it('handles BaseError with non-JSON message fallback', () => {
-    const { middleware, errorService } = loadErrorHandler('test');
+  it('handles BaseError with non-JSON message fallback', async () => {
+    const { middleware, errorService } = await loadErrorHandler('test');
     const req = { originalUrl: '/api/test', method: 'GET' };
     const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
 
@@ -69,8 +69,8 @@ describe('error-handler middleware', () => {
     });
   });
 
-  it('handles unknown errors as 500', () => {
-    const { middleware } = loadErrorHandler('test');
+  it('handles unknown errors as 500', async () => {
+    const { middleware } = await loadErrorHandler('test');
     const req = { originalUrl: '/api/test', method: 'GET' };
     const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
 
@@ -83,8 +83,8 @@ describe('error-handler middleware', () => {
     });
   });
 
-  it('includes debug details and logs warning in development', () => {
-    const { middleware, loggerWarn, errorService } = loadErrorHandler('development');
+  it('includes debug details and logs warning in development', async () => {
+    const { middleware, loggerWarn, errorService } = await loadErrorHandler('development');
     const req = { originalUrl: '/api/test', method: 'POST' };
     const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
 

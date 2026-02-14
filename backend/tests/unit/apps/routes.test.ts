@@ -1,5 +1,5 @@
 describe('apps/routes', () => {
-  it('mounts all module routers under /api', () => {
+  it('mounts all module routers under /api', async () => {
     jest.resetModules();
 
     const apiRouter = { use: jest.fn() };
@@ -49,8 +49,7 @@ describe('apps/routes', () => {
       default: userRoutes,
     }));
 
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { registerApiRoutes } = require('@dist/apps/routes');
+    const { registerApiRoutes } = await import('@dist/apps/routes');
 
     const app = { use: jest.fn() };
     registerApiRoutes(app);

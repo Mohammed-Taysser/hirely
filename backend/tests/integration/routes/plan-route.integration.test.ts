@@ -1,6 +1,6 @@
 import { findRouteLayer } from '../helpers/route-inspector.helper';
 
-const setup = () => {
+const setup = async () => {
   jest.resetModules();
 
   const controller = {
@@ -42,14 +42,13 @@ const setup = () => {
     default: validateRequest,
   }));
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const planRoutes = require('@dist/modules/plan/presentation/plan.route').default;
+  const { default: planRoutes } = await import('@dist/modules/plan/presentation/plan.route');
   return { planRoutes, controller, dto, authenticateMiddleware, validateRequest };
 };
 
 describe('plan route integration', () => {
-  it('all plan routes are protected and validated before controller', () => {
-    const { planRoutes, controller, dto, authenticateMiddleware } = setup();
+  it('all plan routes are protected and validated before controller', async () => {
+    const { planRoutes, controller, dto, authenticateMiddleware } = await setup();
 
     const getPlans = findRouteLayer(planRoutes, 'get', '/');
     expect(getPlans.stack[0].handle).toBe(authenticateMiddleware);

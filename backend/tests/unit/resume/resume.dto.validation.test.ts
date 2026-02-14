@@ -129,4 +129,38 @@ describe('resume.dto validation', () => {
       })
     ).toThrow('Invalid templateId');
   });
+
+  it('accepts enqueue export with valid idempotencyKey', () => {
+    expect(() =>
+      resumeDTO.enqueueExport.body.parse({
+        store: true,
+        idempotencyKey: 'idem-key-2026-02-14-1',
+      })
+    ).not.toThrow();
+  });
+
+  it('rejects enqueue export with too short idempotencyKey', () => {
+    expect(() =>
+      resumeDTO.enqueueExport.body.parse({
+        store: true,
+        idempotencyKey: 'short',
+      })
+    ).toThrow();
+  });
+
+  it('accepts retry failed export params with valid exportId', () => {
+    expect(() =>
+      resumeDTO.retryFailedExport.params.parse({
+        exportId: '7de625ab-9cf0-44f9-a9f5-f69e828eb963',
+      })
+    ).not.toThrow();
+  });
+
+  it('rejects retry failed export email params with invalid jobId', () => {
+    expect(() =>
+      resumeDTO.retryFailedExportEmailJob.params.parse({
+        jobId: 'invalid-uuid',
+      })
+    ).toThrow();
+  });
 });

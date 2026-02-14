@@ -49,6 +49,20 @@ export class PrismaSystemLogQueryRepository implements ISystemLogQueryRepository
     return countMap;
   }
 
+  async hasActionSince(action: string, since: Date): Promise<boolean> {
+    const latest = await prisma.systemLog.findFirst({
+      where: {
+        action,
+        createdAt: {
+          gte: since,
+        },
+      },
+      select: { id: true },
+    });
+
+    return Boolean(latest);
+  }
+
   async findFailedExportEmailJobs(
     query: FailedExportEmailJobQuery
   ): Promise<{ jobs: FailedExportEmailJobDto[]; total: number }> {
@@ -86,6 +100,40 @@ export class PrismaSystemLogQueryRepository implements ISystemLogQueryRepository
         createdAt: row.createdAt,
       })),
       total,
+    };
+  }
+
+  async findFailedExportEmailJobById(
+    userId: string,
+    logId: string
+  ): Promise<FailedExportEmailJobDto | null> {
+    const row = await prisma.systemLog.findFirst({
+      where: {
+        id: logId,
+        userId,
+        action: {
+          in: [SystemActions.EXPORT_EMAIL_FAILED, SystemActions.WORKER_EMAIL_FAILED],
+        },
+      },
+      select: {
+        id: true,
+        action: true,
+        message: true,
+        metadata: true,
+        createdAt: true,
+      },
+    });
+
+    if (!row) {
+      return null;
+    }
+
+    return {
+      id: row.id,
+      action: row.action,
+      message: row.message,
+      metadata: toRecordOrNull(row.metadata),
+      createdAt: row.createdAt,
     };
   }
 }

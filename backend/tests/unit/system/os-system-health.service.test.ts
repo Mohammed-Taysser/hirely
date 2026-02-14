@@ -2,7 +2,9 @@ type LoadedSystemHealth = {
   OsSystemHealthService: new () => { getSnapshot: () => { systemHealth: string } };
 };
 
-const loadService = (params?: { cpuUsages?: number; memoryUsages?: number }): LoadedSystemHealth => {
+const loadService = async (
+  params?: { cpuUsages?: number; memoryUsages?: number }
+): Promise<LoadedSystemHealth> => {
   jest.resetModules();
 
   const cpuUsages = params?.cpuUsages ?? 50;
@@ -41,28 +43,26 @@ const loadService = (params?: { cpuUsages?: number; memoryUsages?: number }): Lo
     },
   }));
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { OsSystemHealthService } = require('@dist/modules/system/infrastructure/services/os-system-health.service');
-  return { OsSystemHealthService };
+  return import('@dist/modules/system/infrastructure/services/os-system-health.service');
 };
 
 describe('OsSystemHealthService', () => {
-  it('returns HEALTHY when usage is below thresholds', () => {
-    const { OsSystemHealthService } = loadService({ cpuUsages: 60, memoryUsages: 60 });
+  it('returns HEALTHY when usage is below thresholds', async () => {
+    const { OsSystemHealthService } = await loadService({ cpuUsages: 60, memoryUsages: 60 });
     const snapshot = new OsSystemHealthService().getSnapshot();
 
     expect(snapshot.systemHealth).toBe('HEALTHY');
   });
 
-  it('returns DEGRADED when cpu or memory usage is above 90', () => {
-    const { OsSystemHealthService } = loadService({ cpuUsages: 91, memoryUsages: 70 });
+  it('returns DEGRADED when cpu or memory usage is above 90', async () => {
+    const { OsSystemHealthService } = await loadService({ cpuUsages: 91, memoryUsages: 70 });
     const snapshot = new OsSystemHealthService().getSnapshot();
 
     expect(snapshot.systemHealth).toBe('DEGRADED');
   });
 
-  it('returns DOWN when cpu or memory usage is above 95', () => {
-    const { OsSystemHealthService } = loadService({ cpuUsages: 96, memoryUsages: 70 });
+  it('returns DOWN when cpu or memory usage is above 95', async () => {
+    const { OsSystemHealthService } = await loadService({ cpuUsages: 96, memoryUsages: 70 });
     const snapshot = new OsSystemHealthService().getSnapshot();
 
     expect(snapshot.systemHealth).toBe('DOWN');

@@ -18,6 +18,7 @@ const {
   deleteUserUseCase,
   changeUserPlanUseCase,
   getUserByIdQueryUseCase,
+  getUserPlanUsageUseCase,
   createUserWithPlanUseCase,
 } = userContainer;
 
@@ -83,6 +84,21 @@ async function getProfile(req: Request, response: Response) {
   responseService.success(response, {
     message: 'User fetched successfully',
     data: user,
+  });
+}
+
+async function getPlanUsage(req: Request, response: Response) {
+  const request = req as TypedAuthenticatedRequest;
+
+  const result = await getUserPlanUsageUseCase.execute({ userId: request.user.id });
+
+  if (result.isFailure) {
+    throw mapAppErrorToHttp(result.error);
+  }
+
+  responseService.success(response, {
+    message: 'User plan usage fetched successfully',
+    data: result.getValue(),
   });
 }
 
@@ -206,6 +222,7 @@ const userController = {
   getUsers,
   getUsersList,
   getProfile,
+  getPlanUsage,
   getUserById,
   createUser,
   updateUser,

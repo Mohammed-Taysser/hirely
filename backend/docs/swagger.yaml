@@ -264,6 +264,23 @@ paths:
                       data:
                         $ref: '#/components/schemas/User'
 
+  /users/me/plan-usage:
+    get:
+      tags: [Users]
+      summary: Get current user plan usage
+      responses:
+        '200':
+          description: Current plan limits, usage, and remaining capacity
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserPlanUsage'
+
   /users:
     get:
       tags: [Users]
@@ -879,6 +896,12 @@ paths:
                 store:
                   type: boolean
                   example: true
+                idempotencyKey:
+                  type: string
+                  minLength: 8
+                  maxLength: 128
+                  description: Optional key to safely retry enqueue without creating duplicate exports.
+                  example: export-resume-1-req-2026-02-14-1
       responses:
         '200':
           description: Export enqueued
@@ -897,6 +920,18 @@ paths:
                           delivery:
                             type: string
                             enum: [download, email]
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Idempotency key conflict (same key used for another resume)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /resumes/{resumeId}/export/download:
     get:
@@ -932,6 +967,50 @@ paths:
                       data:
                         $ref: '#/components/schemas/ExportStatusResponse'
 
+  /resumes/exports/{exportId}/retry:
+    post:
+      tags: [Exports]
+      summary: Retry a failed export job
+      parameters:
+        - $ref: '#/components/parameters/ExportIdParam'
+      responses:
+        '200':
+          description: Failed export retried
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          exportId:
+                            type: string
+                            format: uuid
+                          status:
+                            type: string
+                            enum: [PENDING]
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Export not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Export is not in failed state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /resumes/exports/failed:
     get:
       tags: [Exports]
@@ -961,6 +1040,56 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaginatedFailedExportEmailJobsResponse'
+
+  /resumes/exports/failed-emails/{jobId}/retry:
+    post:
+      tags: [Exports]
+      summary: Retry a failed export email job
+      parameters:
+        - $ref: '#/components/parameters/JobIdParam'
+      responses:
+        '200':
+          description: Failed export email job retried
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          failedJobId:
+                            type: string
+                            format: uuid
+                          exportId:
+                            type: string
+                            format: uuid
+                          to:
+                            type: string
+                            format: email
+                          reason:
+                            type: string
+                            enum: [free-tier-export, bulk-apply]
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Failed export email job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Export is not ready for email retry
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
 components:
   securitySchemes:
@@ -1035,6 +1164,13 @@ components:
         format: uuid
     ExportIdParam:
       name: exportId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    JobIdParam:
+      name: jobId
       in: path
       required: true
       schema:
@@ -1452,6 +1588,49 @@ components:
         updatedAt:
           type: string
           format: date-time
+
+    UserPlanUsage:
+      type: object
+      properties:
+        plan:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            code:
+              type: string
+            name:
+              type: string
+        limits:
+          type: object
+          properties:
+            maxResumes:
+              type: integer
+            maxExports:
+              type: integer
+            dailyUploadMb:
+              type: integer
+            dailyUploadBytes:
+              type: integer
+        usage:
+          type: object
+          properties:
+            resumesUsed:
+              type: integer
+            exportsUsed:
+              type: integer
+            dailyUploadUsedBytes:
+              type: integer
+        remaining:
+          type: object
+          properties:
+            resumes:
+              type: integer
+            exports:
+              type: integer
+            dailyUploadBytes:
+              type: integer
 
     Resume:
       type: object

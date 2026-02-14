@@ -18,10 +18,12 @@ export const AuditActions = {
   RESUME_EXPORT_DOWNLOADED: 'resume.export.downloaded',
 
   EXPORT_ENQUEUED: 'export.enqueued',
+  EXPORT_RETRY_ENQUEUED: 'export.retry.enqueued',
   EXPORT_PROCESSED: 'export.processed',
   EXPORT_FAILED: 'export.failed',
   EXPORT_EMAIL_SENT: 'export.email.sent',
   EXPORT_EMAIL_FAILED: 'export.email.failed',
+  EXPORT_EMAIL_RETRY_ENQUEUED: 'export.email.retry.enqueued',
 
   BULK_APPLY_ENQUEUED: 'bulk-apply.enqueued',
 } as const;

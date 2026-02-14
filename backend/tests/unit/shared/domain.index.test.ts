@@ -1,9 +1,11 @@
 describe('shared/domain index', () => {
-  it('exports expected members in normal runtime', () => {
+  it('exports expected members in normal runtime', async () => {
     jest.resetModules();
 
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const domain = require('@dist/modules/shared/domain');
+    const domain = (await import('@dist/modules/shared/domain')) as unknown as Record<
+      string,
+      unknown
+    >;
 
     expect(domain.Result).toBeDefined();
     expect(domain.Entity).toBeDefined();
@@ -11,7 +13,7 @@ describe('shared/domain index', () => {
     expect(domain.AggregateRoot).toBeDefined();
   });
 
-  it('supports CommonJS export fallback branch when Object.create is unavailable', () => {
+  it('supports CommonJS export fallback branch when Object.create is unavailable', async () => {
     jest.resetModules();
 
     const originalCreate = Object.create;
@@ -23,9 +25,11 @@ describe('shared/domain index', () => {
         writable: true,
       });
 
-      jest.isolateModules(() => {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const domain = require('@dist/modules/shared/domain');
+      await jest.isolateModulesAsync(async () => {
+        const domain = (await import('@dist/modules/shared/domain')) as unknown as Record<
+          string,
+          unknown
+        >;
         expect(domain.Result).toBeDefined();
         expect(domain.Entity).toBeDefined();
       });

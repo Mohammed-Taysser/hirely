@@ -8,19 +8,15 @@ const mockCreatePlanExecute = jest.fn();
 const mockUpdatePlanExecute = jest.fn();
 const mockDeletePlanExecute = jest.fn();
 
-const renderErrorResponse = (err: unknown, req: Record<string, unknown>) => {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const errorHandlerMiddleware = require('@dist/middleware/error-handler.middleware').default;
-  const response = {
-    status: jest.fn().mockReturnThis(),
-    json: jest.fn(),
+type SetupPlanRouter = {
+  planRoutes: { stack?: unknown[] };
+  renderErrorResponse: (err: unknown, req: Record<string, unknown>) => {
+    status: jest.Mock;
+    json: jest.Mock;
   };
-
-  errorHandlerMiddleware(err, req, response, (() => {}) as never);
-  return response;
 };
 
-const setupRouter = () => {
+const setupRouter = async (): Promise<SetupPlanRouter> => {
   jest.resetModules();
   mockGetPlansExecute.mockReset();
   mockGetPlanByIdExecute.mockReset();
@@ -43,13 +39,25 @@ const setupRouter = () => {
     default: (_req: unknown, _res: unknown, next: (err?: unknown) => void) => next(),
   }));
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  return require('@dist/modules/plan/presentation/plan.route').default;
+  const { default: planRoutes } = await import('@dist/modules/plan/presentation/plan.route');
+  const { default: errorHandlerMiddleware } = await import('@dist/middleware/error-handler.middleware');
+
+  const renderErrorResponse = (err: unknown, req: Record<string, unknown>) => {
+    const response = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn(),
+    };
+
+    errorHandlerMiddleware(err, req, response, (() => {}) as never);
+    return response;
+  };
+
+  return { planRoutes, renderErrorResponse };
 };
 
 describe('plan controller http integration', () => {
   it('returns 400 for invalid query payload before controller', async () => {
-    const planRoutes = setupRouter();
+    const { planRoutes, renderErrorResponse } = await setupRouter();
     const route = findRouteLayer(planRoutes, 'get', '/');
     const req = {
       body: {},
@@ -68,7 +76,7 @@ describe('plan controller http integration', () => {
   });
 
   it('returns 200 with paginated plans when query is valid', async () => {
-    const planRoutes = setupRouter();
+    const { planRoutes } = await setupRouter();
     const route = findRouteLayer(planRoutes, 'get', '/');
     mockGetPlansExecute.mockResolvedValue(
       successResult({

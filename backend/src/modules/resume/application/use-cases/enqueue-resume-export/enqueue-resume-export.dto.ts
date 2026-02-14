@@ -3,6 +3,7 @@ import type { AuthenticatedUser } from '@/modules/shared/application/authenticat
 export interface EnqueueResumeExportRequestDto {
   user: AuthenticatedUser;
   resumeId: string;
+  idempotencyKey?: string;
 }
 
 export interface EnqueueResumeExportResponseDto {

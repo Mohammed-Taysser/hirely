@@ -3,6 +3,7 @@ import { RATE_LIMITS } from '@/apps/constant';
 import {
   auditLogService,
   bulkApplyEmailQueueService,
+  exportEmailQueueService,
   exportQueueService,
   exportService,
   rateLimiter,
@@ -13,6 +14,7 @@ import {
   userQueryRepository,
   planLimitQueryRepository,
   resumeExportQueryRepository,
+  resumeExportRepository,
   systemLogQueryRepository,
 } from '@/apps/container.shared';
 import { BulkApplyUseCase } from '@/modules/resume/application/use-cases/bulk-apply/bulk-apply.use-case';
@@ -29,6 +31,8 @@ import { GetResumeExportsUseCase } from '@/modules/resume/application/use-cases/
 import { GetResumeSnapshotsUseCase } from '@/modules/resume/application/use-cases/get-resume-snapshots/get-resume-snapshots.use-case';
 import { GetResumesUseCase } from '@/modules/resume/application/use-cases/get-resumes/get-resumes.use-case';
 import { GetResumesListUseCase } from '@/modules/resume/application/use-cases/get-resumes-list/get-resumes-list.use-case';
+import { RetryFailedExportUseCase } from '@/modules/resume/application/use-cases/retry-failed-export/retry-failed-export.use-case';
+import { RetryFailedExportEmailJobUseCase } from '@/modules/resume/application/use-cases/retry-failed-export-email-job/retry-failed-export-email-job.use-case';
 import { SetDefaultResumeUseCase } from '@/modules/resume/application/use-cases/set-default-resume/set-default-resume.use-case';
 import { UpdateResumeUseCase } from '@/modules/resume/application/use-cases/update-resume/update-resume.use-case';
 
@@ -72,6 +76,7 @@ const getResumeExportStatusUseCase = new GetResumeExportStatusUseCase(exportServ
 const enqueueResumeExportUseCase = new EnqueueResumeExportUseCase(
   exportService,
   exportQueueService,
+  resumeExportQueryRepository,
   resumeSnapshotRepository,
   userQueryRepository,
   rateLimiter,
@@ -82,6 +87,25 @@ const getResumesUseCase = new GetResumesUseCase(resumeQueryRepository);
 const getResumesListUseCase = new GetResumesListUseCase(resumeQueryRepository);
 const getResumeSnapshotsUseCase = new GetResumeSnapshotsUseCase(resumeQueryRepository);
 const getExportStatusUseCase = new GetExportStatusUseCase(exportService);
+const retryFailedExportUseCase = new RetryFailedExportUseCase(
+  resumeExportQueryRepository,
+  resumeExportRepository,
+  exportQueueService,
+  rateLimiter,
+  RATE_LIMITS.EXPORT_RETRY,
+  systemLogService,
+  auditLogService
+);
+const retryFailedExportEmailJobUseCase = new RetryFailedExportEmailJobUseCase(
+  systemLogQueryRepository,
+  resumeExportQueryRepository,
+  exportEmailQueueService,
+  bulkApplyEmailQueueService,
+  rateLimiter,
+  RATE_LIMITS.EXPORT_EMAIL_RETRY,
+  systemLogService,
+  auditLogService
+);
 const bulkApplyUseCase = new BulkApplyUseCase(
   exportService,
   exportQueueService,
@@ -104,6 +128,8 @@ const resumeContainer = {
   getFailedExportEmailJobsUseCase,
   getResumeExportStatusUseCase,
   getExportStatusUseCase,
+  retryFailedExportUseCase,
+  retryFailedExportEmailJobUseCase,
   exportResumeUseCase,
   enqueueResumeExportUseCase,
   bulkApplyUseCase,

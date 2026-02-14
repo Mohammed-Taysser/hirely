@@ -1,6 +1,4 @@
-import { PlanLimitDto } from '@/modules/plan/application/repositories/plan.query.repository.interface';
-
-export type { PlanLimitDto };
+import { PlanLimitDto } from '@/modules/plan/application/dto/plan-limit.dto';
 
 export interface IPlanLimitQueryRepository {
   findByPlanId(planId: string): Promise<PlanLimitDto | null>;

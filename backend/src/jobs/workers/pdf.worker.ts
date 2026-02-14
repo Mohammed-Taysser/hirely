@@ -6,6 +6,7 @@ import {
   processExportPdfUseCase,
   systemLogService,
 } from '@/apps/worker-containers/pdf-worker.container';
+import { parsePdfExportQueuePayload } from '@/modules/resume/application/contracts/export-queue.contract';
 import { SystemLogInput } from '@/modules/system/application/services/system-log.service.interface';
 import { SystemActions } from '@/modules/system/application/system.actions';
 import { logger } from '@/shared/logger';
@@ -22,11 +23,7 @@ export const startPdfWorker = () => {
   return new Worker(
     QUEUE_NAMES.pdf,
     async (job) => {
-      const { exportId, snapshotId, userId } = job.data as {
-        exportId: string;
-        snapshotId: string;
-        userId: string;
-      };
+      const { exportId, snapshotId, userId } = parsePdfExportQueuePayload(job.data);
       const correlationId = `pdf:${job.id}`;
 
       await logSystem({

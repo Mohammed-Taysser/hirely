@@ -11,7 +11,7 @@ type WorkerInstance = {
 };
 
 type LoadedEmailWorker = {
-  startEmailWorker: () => WorkerInstance;
+  startEmailWorker: () => unknown;
   workerInstances: WorkerInstance[];
   workerFactory: jest.Mock;
   execute: jest.Mock;
@@ -19,7 +19,7 @@ type LoadedEmailWorker = {
   loggerError: jest.Mock;
 };
 
-const loadEmailWorker = (): LoadedEmailWorker => {
+const loadEmailWorker = async (): Promise<LoadedEmailWorker> => {
   jest.resetModules();
 
   const workerInstances: WorkerInstance[] = [];
@@ -71,15 +71,14 @@ const loadEmailWorker = (): LoadedEmailWorker => {
     },
   }));
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { startEmailWorker } = require('@dist/jobs/workers/email.worker');
+  const { startEmailWorker } = await import('@dist/jobs/workers/email.worker');
 
   return { startEmailWorker, workerInstances, workerFactory, execute, systemLog, loggerError };
 };
 
 describe('email.worker', () => {
-  it('creates worker with expected queue and options', () => {
-    const { startEmailWorker, workerFactory, workerInstances } = loadEmailWorker();
+  it('creates worker with expected queue and options', async () => {
+    const { startEmailWorker, workerFactory, workerInstances } = await loadEmailWorker();
 
     startEmailWorker();
 
@@ -96,7 +95,7 @@ describe('email.worker', () => {
   });
 
   it('processes email job and logs processing + sent', async () => {
-    const { startEmailWorker, workerInstances, execute, systemLog } = loadEmailWorker();
+    const { startEmailWorker, workerInstances, execute, systemLog } = await loadEmailWorker();
     execute.mockResolvedValue(successResult(undefined));
     startEmailWorker();
 
@@ -126,7 +125,7 @@ describe('email.worker', () => {
   });
 
   it('throws and logs failed action when send-export-email fails', async () => {
-    const { startEmailWorker, workerInstances, execute, systemLog } = loadEmailWorker();
+    const { startEmailWorker, workerInstances, execute, systemLog } = await loadEmailWorker();
     execute.mockResolvedValue(failureResult(new Error('email failed')));
     startEmailWorker();
 
@@ -138,6 +137,10 @@ describe('email.worker', () => {
           userId: 'user-1',
           to: 'person@example.com',
           reason: 'bulk-apply',
+          recipient: {
+            email: 'person@example.com',
+            name: 'Hiring Manager',
+          },
         },
       })
     ).rejects.toThrow('email failed');
@@ -152,7 +155,8 @@ describe('email.worker', () => {
   });
 
   it('logs lifecycle actions and catches system log write errors', async () => {
-    const { startEmailWorker, workerInstances, execute, systemLog, loggerError } = loadEmailWorker();
+    const { startEmailWorker, workerInstances, execute, systemLog, loggerError } =
+      await loadEmailWorker();
     const logWriteError = new Error('system log unavailable');
     systemLog.mockRejectedValueOnce(logWriteError);
     execute.mockResolvedValue(successResult(undefined));
@@ -185,7 +189,7 @@ describe('email.worker', () => {
   });
 
   it('uses default email failure message when result has no error and handles failed event without job', async () => {
-    const { startEmailWorker, workerInstances, execute, systemLog } = loadEmailWorker();
+    const { startEmailWorker, workerInstances, execute, systemLog } = await loadEmailWorker();
     execute.mockResolvedValue(failureResult(null));
 
     startEmailWorker();
@@ -210,6 +214,31 @@ describe('email.worker', () => {
         metadata: expect.objectContaining({ jobId: undefined }),
         message: 'worker failed without job',
       })
+    );
+  });
+
+  it('rejects invalid queue payload before executing use case', async () => {
+    const { startEmailWorker, workerInstances, execute, systemLog } = await loadEmailWorker();
+    execute.mockResolvedValue(successResult(undefined));
+
+    startEmailWorker();
+    const worker = workerInstances[0];
+
+    await expect(
+      worker.processor({
+        id: 'job-1',
+        data: {
+          exportId: 'export-1',
+          userId: 'user-1',
+          to: 'not-an-email',
+          reason: 'free-tier-export',
+        },
+      })
+    ).rejects.toThrow();
+
+    expect(execute).not.toHaveBeenCalled();
+    expect(systemLog).not.toHaveBeenCalledWith(
+      expect.objectContaining({ action: SystemActions.EXPORT_EMAIL_PROCESSING })
     );
   });
 });

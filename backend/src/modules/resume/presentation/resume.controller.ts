@@ -20,6 +20,8 @@ const {
   getFailedExportsUseCase,
   getFailedExportEmailJobsUseCase,
   getExportStatusUseCase,
+  retryFailedExportUseCase,
+  retryFailedExportEmailJobUseCase,
   getResumeExportStatusUseCase,
   exportResumeUseCase,
   enqueueResumeExportUseCase,
@@ -230,6 +232,44 @@ async function getExportStatus(req: Request, response: Response) {
   });
 }
 
+async function retryFailedExport(req: Request, response: Response) {
+  const request = req as TypedAuthenticatedRequest<ResumeDTO['retryFailedExport']>;
+  const { exportId } = request.parsedParams;
+
+  const result = await retryFailedExportUseCase.execute({
+    userId: request.user.id,
+    exportId,
+  });
+
+  if (result.isFailure) {
+    throw mapAppErrorToHttp(result.error);
+  }
+
+  responseService.success(response, {
+    message: 'Failed export retried successfully',
+    data: result.getValue(),
+  });
+}
+
+async function retryFailedExportEmailJob(req: Request, response: Response) {
+  const request = req as TypedAuthenticatedRequest<ResumeDTO['retryFailedExportEmailJob']>;
+  const { jobId } = request.parsedParams;
+
+  const result = await retryFailedExportEmailJobUseCase.execute({
+    userId: request.user.id,
+    failedJobId: jobId,
+  });
+
+  if (result.isFailure) {
+    throw mapAppErrorToHttp(result.error);
+  }
+
+  responseService.success(response, {
+    message: 'Failed export email job retried successfully',
+    data: result.getValue(),
+  });
+}
+
 async function exportResume(req: Request, response: Response) {
   const request = req as TypedAuthenticatedRequest<ResumeDTO['exportResume']>;
   const { resumeId } = request.parsedParams;
@@ -251,7 +291,7 @@ async function exportResume(req: Request, response: Response) {
 async function enqueueExport(req: Request, response: Response) {
   const request = req as TypedAuthenticatedRequest<ResumeDTO['enqueueExport']>;
   const { resumeId } = request.parsedParams;
-  const { store } = request.parsedBody;
+  const { store, idempotencyKey } = request.parsedBody;
 
   if (!store) {
     throw errorService.badRequest('Use /resumes/:resumeId/export/download for direct download');
@@ -260,6 +300,7 @@ async function enqueueExport(req: Request, response: Response) {
   const result = await enqueueResumeExportUseCase.execute({
     user: request.user,
     resumeId,
+    idempotencyKey,
   });
 
   if (result.isFailure) {
@@ -394,6 +435,8 @@ const resumeController = {
   getFailedExports,
   getFailedExportEmailJobs,
   getExportStatus,
+  retryFailedExport,
+  retryFailedExportEmailJob,
   exportResume,
   enqueueExport,
   getResumeExportStatus,

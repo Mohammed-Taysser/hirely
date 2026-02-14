@@ -1,4 +1,5 @@
 import { failureResult, successResult } from '../../helpers/test-fixtures';
+import { NotFoundError, ValidationError } from '@dist/modules/shared/application/app-error';
 
 const mockGetPlansExecute = jest.fn();
 const mockGetPlanByIdExecute = jest.fn();
@@ -16,10 +17,7 @@ jest.mock('@dist/apps/container', () => ({
   },
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const planController = require('@dist/modules/plan/presentation/plan.controller').default;
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { NotFoundError, ValidationError } = require('@dist/modules/shared/application/app-error');
+let planController: typeof import('@dist/modules/plan/presentation/plan.controller').default;
 
 const buildResponse = () => ({
   status: jest.fn().mockReturnThis(),
@@ -27,6 +25,10 @@ const buildResponse = () => ({
 });
 
 describe('plan controller integration', () => {
+  beforeAll(async () => {
+    ({ default: planController } = await import('@dist/modules/plan/presentation/plan.controller'));
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
   });

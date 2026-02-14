@@ -9,11 +9,12 @@ type WorkerInstance = {
 };
 
 type LoadedExportCleanupWorker = {
-  startExportCleanupWorker: () => WorkerInstance;
+  startExportCleanupWorker: () => unknown;
   workerInstances: WorkerInstance[];
   workerFactory: jest.Mock;
   queueAdd: jest.Mock;
   cleanupExecute: jest.Mock;
+  evaluateAlertsExecute: jest.Mock;
   systemLog: jest.Mock;
   loggerError: jest.Mock;
 };
@@ -23,7 +24,7 @@ const flushPromises = async () => {
   await Promise.resolve();
 };
 
-const loadExportCleanupWorker = (): LoadedExportCleanupWorker => {
+const loadExportCleanupWorker = async (): Promise<LoadedExportCleanupWorker> => {
   jest.resetModules();
 
   const workerInstances: WorkerInstance[] = [];
@@ -44,6 +45,30 @@ const loadExportCleanupWorker = (): LoadedExportCleanupWorker => {
 
   const queueAdd = jest.fn().mockResolvedValue(undefined);
   const cleanupExecute = jest.fn();
+  const evaluateAlertsExecute = jest.fn().mockResolvedValue(
+    successResult({
+      windowMinutes: 60,
+      minEvents: 20,
+      thresholdRatio: 0.25,
+      cooldownSeconds: 900,
+      pdf: {
+        total: 0,
+        failed: 0,
+        failureRatio: 0,
+        thresholdExceeded: false,
+        triggered: false,
+        suppressedByCooldown: false,
+      },
+      email: {
+        total: 0,
+        failed: 0,
+        failureRatio: 0,
+        thresholdExceeded: false,
+        triggered: false,
+        suppressedByCooldown: false,
+      },
+    })
+  );
   const systemLog = jest.fn().mockResolvedValue(undefined);
   const loggerError = jest.fn();
 
@@ -56,6 +81,7 @@ const loadExportCleanupWorker = (): LoadedExportCleanupWorker => {
     default: {
       EXPORT_CLEANUP_INTERVAL_SECONDS: 600,
       EXPORT_CLEANUP_BATCH_SIZE: 50,
+      EXPORT_CLEANUP_DRY_RUN: false,
     },
   }));
   jest.doMock('@dist/apps/constant', () => ({
@@ -70,6 +96,9 @@ const loadExportCleanupWorker = (): LoadedExportCleanupWorker => {
     __esModule: true,
     cleanupExpiredExportsUseCase: {
       execute: (...args: unknown[]) => cleanupExecute(...args),
+    },
+    evaluateExportFailureAlertsUseCase: {
+      execute: (...args: unknown[]) => evaluateAlertsExecute(...args),
     },
     systemLogService: {
       log: (...args: unknown[]) => systemLog(...args),
@@ -88,8 +117,7 @@ const loadExportCleanupWorker = (): LoadedExportCleanupWorker => {
     },
   }));
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { startExportCleanupWorker } = require('@dist/jobs/workers/export-cleanup.worker');
+  const { startExportCleanupWorker } = await import('@dist/jobs/workers/export-cleanup.worker');
 
   return {
     startExportCleanupWorker,
@@ -97,6 +125,7 @@ const loadExportCleanupWorker = (): LoadedExportCleanupWorker => {
     workerFactory,
     queueAdd,
     cleanupExecute,
+    evaluateAlertsExecute,
     systemLog,
     loggerError,
   };
@@ -104,7 +133,8 @@ const loadExportCleanupWorker = (): LoadedExportCleanupWorker => {
 
 describe('export-cleanup.worker', () => {
   it('schedules repeatable cleanup job and logs success', async () => {
-    const { startExportCleanupWorker, queueAdd, systemLog, workerFactory } = loadExportCleanupWorker();
+    const { startExportCleanupWorker, queueAdd, systemLog, workerFactory } =
+      await loadExportCleanupWorker();
 
     startExportCleanupWorker();
     await flushPromises();
@@ -122,6 +152,7 @@ describe('export-cleanup.worker', () => {
         metadata: expect.objectContaining({
           intervalSeconds: 600,
           batchSize: 50,
+          dryRun: false,
         }),
       })
     );
@@ -133,13 +164,16 @@ describe('export-cleanup.worker', () => {
   });
 
   it('executes cleanup and logs completion metadata', async () => {
-    const { startExportCleanupWorker, workerInstances, cleanupExecute, systemLog } =
-      loadExportCleanupWorker();
+    const { startExportCleanupWorker, workerInstances, cleanupExecute, evaluateAlertsExecute, systemLog } =
+      await loadExportCleanupWorker();
     cleanupExecute.mockResolvedValue(
       successResult({
         scanned: 4,
         deletedRecords: 3,
         deletedFiles: 3,
+        wouldDeleteRecords: 4,
+        wouldDeleteFiles: 4,
+        dryRun: false,
         failed: 1,
         failures: [{ exportId: 'exp-1', userId: 'user-1', reason: 'storage unavailable' }],
       })
@@ -148,7 +182,8 @@ describe('export-cleanup.worker', () => {
     startExportCleanupWorker();
     await workerInstances[0].processor({ id: 'job-1' });
 
-    expect(cleanupExecute).toHaveBeenCalledWith({ batchSize: 50 });
+    expect(cleanupExecute).toHaveBeenCalledWith({ batchSize: 50, dryRun: false });
+    expect(evaluateAlertsExecute).toHaveBeenCalledWith({});
     expect(systemLog).toHaveBeenCalledWith(
       expect.objectContaining({ action: SystemActions.EXPORT_CLEANUP_RUN_STARTED })
     );
@@ -160,20 +195,24 @@ describe('export-cleanup.worker', () => {
           jobId: 'job-1',
           scanned: 4,
           deletedRecords: 3,
+          wouldDeleteRecords: 4,
+          dryRun: false,
           failed: 1,
+          alerts: expect.any(Object),
         }),
       })
     );
   });
 
   it('logs and throws when cleanup use-case fails', async () => {
-    const { startExportCleanupWorker, workerInstances, cleanupExecute, systemLog } =
-      loadExportCleanupWorker();
+    const { startExportCleanupWorker, workerInstances, cleanupExecute, evaluateAlertsExecute, systemLog } =
+      await loadExportCleanupWorker();
     cleanupExecute.mockResolvedValue(failureResult(new Error('cleanup failed')));
 
     startExportCleanupWorker();
 
     await expect(workerInstances[0].processor({ id: 'job-2' })).rejects.toThrow('cleanup failed');
+    expect(evaluateAlertsExecute).not.toHaveBeenCalled();
     expect(systemLog).toHaveBeenCalledWith(
       expect.objectContaining({
         action: SystemActions.EXPORT_CLEANUP_RUN_FAILED,
@@ -184,12 +223,21 @@ describe('export-cleanup.worker', () => {
 
   it('handles schedule failures, lifecycle logs, and write failures', async () => {
     const { startExportCleanupWorker, queueAdd, workerInstances, systemLog, loggerError, cleanupExecute } =
-      loadExportCleanupWorker();
+      await loadExportCleanupWorker();
     queueAdd.mockRejectedValue(new Error('schedule failed'));
     const logWriteError = new Error('system log unavailable');
     systemLog.mockRejectedValueOnce(logWriteError);
     cleanupExecute.mockResolvedValue(
-      successResult({ scanned: 0, deletedRecords: 0, deletedFiles: 0, failed: 0, failures: [] })
+      successResult({
+        scanned: 0,
+        deletedRecords: 0,
+        deletedFiles: 0,
+        wouldDeleteRecords: 0,
+        wouldDeleteFiles: 0,
+        dryRun: false,
+        failed: 0,
+        failures: [],
+      })
     );
 
     startExportCleanupWorker();
@@ -214,6 +262,39 @@ describe('export-cleanup.worker', () => {
       expect.objectContaining({
         action: SystemActions.WORKER_EXPORT_CLEANUP_FAILED,
         message: 'run failed',
+      })
+    );
+  });
+
+  it('logs alert evaluation failure but still completes cleanup log', async () => {
+    const { startExportCleanupWorker, workerInstances, cleanupExecute, evaluateAlertsExecute, systemLog } =
+      await loadExportCleanupWorker();
+    cleanupExecute.mockResolvedValue(
+      successResult({
+        scanned: 1,
+        deletedRecords: 1,
+        deletedFiles: 1,
+        wouldDeleteRecords: 1,
+        wouldDeleteFiles: 1,
+        dryRun: false,
+        failed: 0,
+        failures: [],
+      })
+    );
+    evaluateAlertsExecute.mockResolvedValue(failureResult(new Error('alert query failed')));
+
+    startExportCleanupWorker();
+    await workerInstances[0].processor({ id: 'job-4' });
+
+    expect(systemLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: SystemActions.EXPORT_ALERT_EVALUATION_FAILED,
+        message: 'alert query failed',
+      })
+    );
+    expect(systemLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: SystemActions.EXPORT_CLEANUP_RUN_COMPLETED,
       })
     );
   });

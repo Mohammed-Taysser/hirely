@@ -8,7 +8,7 @@ type LoadedTokenService = {
   verifyMock: jest.Mock;
 };
 
-const loadTokenService = (): LoadedTokenService => {
+const loadTokenService = async (): Promise<LoadedTokenService> => {
   jest.resetModules();
 
   const signMock = jest.fn().mockReturnValue('signed-token');
@@ -31,15 +31,16 @@ const loadTokenService = (): LoadedTokenService => {
     },
   }));
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const tokenService = require('@dist/modules/shared/infrastructure/services/token.service').default;
+  const { default: tokenService } = await import(
+    '@dist/modules/shared/infrastructure/services/token.service'
+  );
 
   return { tokenService, signMock, verifyMock };
 };
 
 describe('token.service', () => {
-  it('signs access token with sanitized payload and access expiry', () => {
-    const { tokenService, signMock } = loadTokenService();
+  it('signs access token with sanitized payload and access expiry', async () => {
+    const { tokenService, signMock } = await loadTokenService();
 
     const token = tokenService.signAccessToken({
       id: 'user-1',
@@ -55,8 +56,8 @@ describe('token.service', () => {
     );
   });
 
-  it('signs refresh token with refresh expiry', () => {
-    const { tokenService, signMock } = loadTokenService();
+  it('signs refresh token with refresh expiry', async () => {
+    const { tokenService, signMock } = await loadTokenService();
 
     tokenService.signRefreshToken({ id: 'user-1', email: 'john@example.com' });
 
@@ -67,8 +68,8 @@ describe('token.service', () => {
     );
   });
 
-  it('verifies token using configured secret', () => {
-    const { tokenService, verifyMock } = loadTokenService();
+  it('verifies token using configured secret', async () => {
+    const { tokenService, verifyMock } = await loadTokenService();
 
     const payload = tokenService.verifyToken<{ id: string; email: string }>('token');
 

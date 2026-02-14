@@ -1,7 +1,10 @@
 import {
   auditLogService,
+  planLimitQueryRepository,
   passwordHasherService,
   planQueryRepository,
+  resumeExportRepository,
+  resumeQueryRepository,
   systemLogService,
   userQueryRepository,
   userRepository,
@@ -10,6 +13,7 @@ import { ChangeUserPlanUseCase } from '@/modules/user/application/use-cases/chan
 import { CreateUserWithPlanUseCase } from '@/modules/user/application/use-cases/create-user-with-plan/create-user-with-plan.use-case';
 import { DeleteUserUseCase } from '@/modules/user/application/use-cases/delete-user/delete-user.use-case';
 import { GetUserByIdQueryUseCase } from '@/modules/user/application/use-cases/get-user-by-id-query/get-user-by-id-query.use-case';
+import { GetUserPlanUsageUseCase } from '@/modules/user/application/use-cases/get-user-plan-usage/get-user-plan-usage.use-case';
 import { GetUsersUseCase } from '@/modules/user/application/use-cases/get-users/get-users.use-case';
 import { GetUsersListUseCase } from '@/modules/user/application/use-cases/get-users-list/get-users-list.use-case';
 import { UpdateUserUseCase } from '@/modules/user/application/use-cases/update-user/update-user.use-case';
@@ -44,6 +48,12 @@ const changeUserPlanUseCase = new ChangeUserPlanUseCase(
   auditLogService
 );
 const getUserByIdQueryUseCase = new GetUserByIdQueryUseCase(userQueryRepository);
+const getUserPlanUsageUseCase = new GetUserPlanUsageUseCase(
+  userQueryRepository,
+  planLimitQueryRepository,
+  resumeQueryRepository,
+  resumeExportRepository
+);
 
 const userContainer = {
   getUsersUseCase,
@@ -52,6 +62,7 @@ const userContainer = {
   deleteUserUseCase,
   changeUserPlanUseCase,
   getUserByIdQueryUseCase,
+  getUserPlanUsageUseCase,
   createUserWithPlanUseCase,
 };
 

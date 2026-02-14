@@ -1,4 +1,5 @@
 import { AUTH_CREDENTIAL, failureResult, successResult } from '../../helpers/test-fixtures';
+import { NotFoundError, ValidationError } from '@dist/modules/shared/application/app-error';
 
 const mockRegisterExecute = jest.fn();
 const mockLoginExecute = jest.fn();
@@ -14,10 +15,7 @@ jest.mock('@dist/apps/container', () => ({
   },
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const authController = require('@dist/modules/auth/presentation/auth.controller').default;
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { NotFoundError, ValidationError } = require('@dist/modules/shared/application/app-error');
+let authController: typeof import('@dist/modules/auth/presentation/auth.controller').default;
 
 const buildResponse = () => ({
   status: jest.fn().mockReturnThis(),
@@ -25,6 +23,10 @@ const buildResponse = () => ({
 });
 
 describe('auth controller integration', () => {
+  beforeAll(async () => {
+    ({ default: authController } = await import('@dist/modules/auth/presentation/auth.controller'));
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
   });

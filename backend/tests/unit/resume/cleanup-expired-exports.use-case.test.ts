@@ -25,6 +25,9 @@ describe('CleanupExpiredExportsUseCase', () => {
         scanned: 2,
         deletedRecords: 2,
         deletedFiles: 1,
+        wouldDeleteRecords: 2,
+        wouldDeleteFiles: 1,
+        dryRun: false,
         failed: 0,
       })
     );
@@ -56,6 +59,36 @@ describe('CleanupExpiredExportsUseCase', () => {
         exportId: 'exp-1',
         userId: 'user-1',
         reason: 'storage unavailable',
+      })
+    );
+  });
+
+  it('supports dry run without deleting files or records', async () => {
+    const repository = {
+      findExpired: jest.fn().mockResolvedValue([
+        { id: 'exp-1', userId: 'user-1', url: 'u1/exp-1.pdf', expiresAt: new Date() },
+        { id: 'exp-2', userId: 'user-1', url: null, expiresAt: new Date() },
+      ]),
+      deleteByIds: jest.fn(),
+    };
+    const storage = {
+      deleteObject: jest.fn(),
+    };
+
+    const useCase = new CleanupExpiredExportsUseCase(repository as never, storage as never);
+    const result = await useCase.execute({ batchSize: 50, dryRun: true });
+
+    expect(result.isSuccess).toBe(true);
+    expect(storage.deleteObject).not.toHaveBeenCalled();
+    expect(repository.deleteByIds).not.toHaveBeenCalled();
+    expect(result.getValue()).toEqual(
+      expect.objectContaining({
+        scanned: 2,
+        deletedRecords: 0,
+        deletedFiles: 0,
+        wouldDeleteRecords: 2,
+        wouldDeleteFiles: 1,
+        dryRun: true,
       })
     );
   });

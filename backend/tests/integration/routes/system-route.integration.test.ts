@@ -1,6 +1,6 @@
 import { findRouteLayer } from '../helpers/route-inspector.helper';
 
-const setup = () => {
+const setup = async () => {
   jest.resetModules();
 
   const controller = {
@@ -37,15 +37,14 @@ const setup = () => {
     default: validateRequest,
   }));
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const systemRoutes = require('@dist/modules/system/presentation/system.route').default;
+  const { default: systemRoutes } = await import('@dist/modules/system/presentation/system.route');
 
   return { systemRoutes, controller, dto, authenticateMiddleware };
 };
 
 describe('system route integration', () => {
-  it('wires health and export ops metrics routes correctly', () => {
-    const { systemRoutes, controller, dto, authenticateMiddleware } = setup();
+  it('wires health and export ops metrics routes correctly', async () => {
+    const { systemRoutes, controller, dto, authenticateMiddleware } = await setup();
 
     const healthRoute = findRouteLayer(systemRoutes, 'get', '/health');
     expect(healthRoute.stack[0].handle).toBe(controller.getHealthCheck);

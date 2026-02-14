@@ -1,25 +1,19 @@
-# Plan Changes (Upgrade/Downgrade)
+# Plan Changes And Limit Model
 
 ## Scope
 
-This feature allows a user to change their plan by plan code (e.g., `FREE`, `PRO`).
+This document covers:
 
-## Current Behavior (MVP)
+- User plan upgrade/downgrade behavior
+- Canonical plan-limit model used by resume/export/billing enforcement
 
-- Plan changes are **immediate** by default.
-- Optional scheduling via `scheduleAt` (future ISO date).
-- Scheduled plan changes are applied by a BullMQ worker every `PLAN_CHANGE_INTERVAL_SECONDS` (default 300s).
-- No billing provider integration yet.
-- No proration or billing-cycle alignment.
-- User can only change **their own** plan.
+## 1. User Plan Change Behavior (Current)
 
-## API
+Endpoint:
 
-### Endpoint
+- `PATCH /users/:userId/plan`
 
-`PATCH /users/:userId/plan`
-
-### Request
+Request:
 
 ```json
 {
@@ -28,28 +22,136 @@ This feature allows a user to change their plan by plan code (e.g., `FREE`, `PRO
 }
 ```
 
-### Response
+Rules:
 
-Returns the updated user payload (full user DTO).
+- Plan change is immediate when `scheduleAt` is omitted.
+- If `scheduleAt` is in the future, change is stored as `pendingPlanId` + `pendingPlanAt`.
+- Scheduled changes are applied by worker loop every `PLAN_CHANGE_INTERVAL_SECONDS`.
+- User can only change their own plan.
 
-If `scheduleAt` is in the future, the plan change is stored as `pendingPlanId` and
-`pendingPlanAt`, and the user’s `planId` remains unchanged until applied.
+## 2. Canonical Plan Limit Model (Phase 5)
 
-### Errors
+Each plan has one canonical limit row in `PlanLimit`:
 
-- `404` if user or plan is not found
-- `400` if plan code is missing
-- `403` if user tries to change another user’s plan
+- `maxResumes`
+- `maxExports`
+- `dailyUploadMb`
 
-## Implementation Notes
+Canonical DTO:
 
-- Use case: `backend/src/modules/user/application/use-cases/change-user-plan/change-user-plan.use-case.ts`
-- Controller: `backend/src/modules/user/presentation/user.controller.ts`
-- Route: `backend/src/modules/user/presentation/user.route.ts`
+- `backend/src/modules/plan/application/dto/plan-limit.dto.ts`
 
-## Future Enhancements
+Canonical policy (single comparison logic path):
 
-- Scheduled downgrades aligned to billing cycle
-- Billing provider integration (Stripe/Paddle)
-- Plan change history table
-- Proration rules
+- `backend/src/modules/plan/application/policies/plan-limit.policy.ts`
+
+Key policy functions:
+
+- `requirePlanUsageLimits(...)`
+- `hasReachedResumeLimit(...)`
+- `hasReachedExportLimit(...)`
+- `exceedsDailyUploadLimit(...)`
+
+## 3. Centralized Enforcement Paths
+
+All resume/export limit checks now go through `plan-limit.policy` and `IPlanLimitQueryRepository`.
+
+Resume create:
+
+- `CreateResumeUseCase`:
+  - reads plan limits via `findByPlanId`
+  - uses `hasReachedResumeLimit`
+
+Export count limit:
+
+- `ExportService.enforceExportLimit`:
+  - reads plan limits via `findByPlanId`
+  - uses `hasReachedExportLimit`
+
+Daily upload byte limit:
+
+- `BillingService.enforceDailyUploadLimit`:
+  - reads plan limits via `findByPlanId`
+  - reads used bytes via `IResumeExportRepository.getUploadedBytesByUserInRange`
+  - uses `exceedsDailyUploadLimit`
+
+## 4. User Plan Usage Endpoint
+
+Endpoint:
+
+- `GET /api/users/me/plan-usage`
+
+Response includes:
+
+- Plan identity (`id`, `code`, `name`)
+- Limits (`maxResumes`, `maxExports`, `dailyUploadMb`, `dailyUploadBytes`)
+- Current usage (`resumesUsed`, `exportsUsed`, `dailyUploadUsedBytes`)
+- Remaining capacity (`resumes`, `exports`, `dailyUploadBytes`)
+
+## 5. Practical Examples
+
+Example A: resume creation
+
+- Plan limits: `maxResumes=3`
+- Current resumes: `3`
+- Result: blocked (`Resume limit reached for your plan`)
+
+Example B: export creation
+
+- Plan limits: `maxExports=10`
+- Current exports: `9`
+- Result: allowed
+
+Example C: daily upload bytes
+
+- Plan limits: `dailyUploadMb=5` (5,242,880 bytes)
+- Used today: 4,900,000 bytes
+- New export size: 500,000 bytes
+- Result: blocked (`Daily upload limit reached for your plan`)
+
+## 6. Implementation Notes
+
+Main files:
+
+- `backend/src/modules/plan/application/dto/plan-limit.dto.ts`
+- `backend/src/modules/plan/application/policies/plan-limit.policy.ts`
+- `backend/src/modules/plan/application/repositories/plan-limit.query.repository.interface.ts`
+- `backend/prisma/migrations/20260214170000_enforce_plan_limit_integrity/migration.sql`
+- `backend/src/modules/resume/application/use-cases/create-resume/create-resume.use-case.ts`
+- `backend/src/modules/resume/application/services/export.service.ts`
+- `backend/src/modules/billing/infrastructure/services/billing.service.ts`
+- `backend/src/modules/user/application/use-cases/get-user-plan-usage/get-user-plan-usage.use-case.ts`
+
+## 7. Future Enhancements
+
+- Add per-feature limits (e.g., bulk apply/day) using the same canonical policy path.
+
+## 8. Export Enqueue Idempotency (New)
+
+Endpoint:
+
+- `POST /api/resumes/:resumeId/export`
+
+Optional request body field:
+
+- `idempotencyKey` (`string`, 8-128 chars)
+
+Rules:
+
+- Same user + same key + same resume: return existing export (`replay`), do not enqueue a new job.
+- Same user + same key + different resume: conflict.
+- Enforced by DB uniqueness on `ResumeExport(userId, idempotencyKey)`.
+
+## 9. Dead-Letter Requeue (New)
+
+Endpoints:
+
+- `POST /api/resumes/exports/:exportId/retry`
+- `POST /api/resumes/exports/failed-emails/:jobId/retry`
+
+Rules:
+
+- Retry export: only allowed when export is in `FAILED` status.
+- Retry failed email: failed log must belong to user and include valid payload metadata.
+- Retry failed email requires export status `READY`.
+- Both endpoints are rate-limited.

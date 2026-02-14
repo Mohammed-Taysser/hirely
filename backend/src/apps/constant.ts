@@ -1,5 +1,7 @@
 export type RateLimitKeys =
   | 'EXPORT'
+  | 'EXPORT_RETRY'
+  | 'EXPORT_EMAIL_RETRY'
   | 'BULK_APPLY'
   | 'LOGIN'
   | 'REGISTER'
@@ -20,6 +22,16 @@ const BODY_LIMIT: string | number = '300kb';
 // Map of endpoints or actions to their limits
 const RATE_LIMITS: Record<RateLimitKeys, RateLimitConfig> = {
   EXPORT: { windowSeconds: 60, max: 5, keyTemplate: 'redis:rate-limit:export:user:{userId}' },
+  EXPORT_RETRY: {
+    windowSeconds: 60 * 60,
+    max: 10,
+    keyTemplate: 'redis:rate-limit:export-retry:user:{userId}',
+  },
+  EXPORT_EMAIL_RETRY: {
+    windowSeconds: 60 * 60,
+    max: 10,
+    keyTemplate: 'redis:rate-limit:export-email-retry:user:{userId}',
+  },
   BULK_APPLY: {
     windowSeconds: 60,
     max: 2,

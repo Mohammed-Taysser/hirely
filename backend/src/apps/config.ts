@@ -73,6 +73,16 @@ const envSchema = z
     // Export workers and retries
     EXPORT_CLEANUP_INTERVAL_SECONDS: z.coerce.number().int().positive().default(3600),
     EXPORT_CLEANUP_BATCH_SIZE: z.coerce.number().int().positive().default(100),
+    EXPORT_CLEANUP_DRY_RUN: z
+      .string()
+      .trim()
+      .optional()
+      .transform((value) => value?.toLowerCase() === 'true')
+      .default(false),
+    EXPORT_ALERT_WINDOW_MINUTES: z.coerce.number().int().positive().default(60),
+    EXPORT_ALERT_MIN_EVENTS: z.coerce.number().int().positive().default(20),
+    EXPORT_ALERT_FAILURE_RATIO: z.coerce.number().min(0).max(1).default(0.25),
+    EXPORT_ALERT_COOLDOWN_SECONDS: z.coerce.number().int().positive().default(900),
     EXPORT_JOB_ATTEMPTS: z.coerce.number().int().positive().default(3),
     EXPORT_JOB_BACKOFF_MS: z.coerce.number().int().positive().default(10000),
     EXPORT_JOB_KEEP_COMPLETED: z.coerce.number().int().positive().default(1000),

@@ -15,15 +15,14 @@ const requiredEnv = {
 describe('apps/config', () => {
   const originalEnv = process.env;
 
-  const loadConfigModule = () => {
+  const loadConfigModule = async () => {
     const dotenvConfigMock = jest.fn();
     jest.doMock('dotenv', () => ({
       __esModule: true,
       config: (...args: unknown[]) => dotenvConfigMock(...args),
     }));
 
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const config = require('@dist/apps/config').default;
+    const { default: config } = await import('@dist/apps/config');
 
     return { config, dotenvConfigMock };
   };
@@ -38,7 +37,7 @@ describe('apps/config', () => {
     process.env = originalEnv;
   });
 
-  it('loads valid config for test environment', () => {
+  it('loads valid config for test environment', async () => {
     process.env = {
       ...process.env,
       ...requiredEnv,
@@ -46,7 +45,7 @@ describe('apps/config', () => {
       ALLOWED_ORIGINS: '',
     };
 
-    const { config, dotenvConfigMock } = loadConfigModule();
+    const { config, dotenvConfigMock } = await loadConfigModule();
 
     expect(config.NODE_ENV).toBe('test');
     expect(config.PORT).toBe(3000);
@@ -59,7 +58,7 @@ describe('apps/config', () => {
     });
   });
 
-  it('uses defaults for optional values when omitted', () => {
+  it('uses defaults for optional values when omitted', async () => {
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
 
     process.env = {
@@ -79,7 +78,7 @@ describe('apps/config', () => {
     delete process.env.PLAN_CHANGE_INTERVAL_SECONDS;
     delete process.env.ALLOWED_ORIGINS;
 
-    const { config } = loadConfigModule();
+    const { config } = await loadConfigModule();
 
     expect(config.NODE_ENV).toBe('development');
     expect(config.ALLOWED_ORIGINS).toEqual([]);
@@ -90,7 +89,7 @@ describe('apps/config', () => {
     warnSpy.mockRestore();
   });
 
-  it('warns when ALLOWED_ORIGINS is empty outside test', () => {
+  it('warns when ALLOWED_ORIGINS is empty outside test', async () => {
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
     process.env = {
       ...process.env,
@@ -99,7 +98,7 @@ describe('apps/config', () => {
       ALLOWED_ORIGINS: '',
     };
 
-    const { config, dotenvConfigMock } = loadConfigModule();
+    const { config, dotenvConfigMock } = await loadConfigModule();
 
     expect(config.NODE_ENV).toBe('development');
     expect(warnSpy).toHaveBeenCalledTimes(1);
@@ -111,7 +110,7 @@ describe('apps/config', () => {
     warnSpy.mockRestore();
   });
 
-  it('exits process when env validation fails', () => {
+  it('exits process when env validation fails', async () => {
     const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
     const exitSpy = jest.spyOn(process, 'exit').mockImplementation((() => {
       throw new Error('process.exit called');
@@ -130,10 +129,7 @@ describe('apps/config', () => {
       config: (...args: unknown[]) => dotenvConfigMock(...args),
     }));
 
-    expect(() => {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      require('@dist/apps/config');
-    }).toThrow('process.exit called');
+    await expect(import('@dist/apps/config')).rejects.toThrow('process.exit called');
 
     expect(errorSpy).toHaveBeenCalled();
     expect(exitSpy).toHaveBeenCalledWith(1);
@@ -147,7 +143,7 @@ describe('apps/config', () => {
     exitSpy.mockRestore();
   });
 
-  it('exits when production smtp config is missing', () => {
+  it('exits when production smtp config is missing', async () => {
     const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
     const exitSpy = jest.spyOn(process, 'exit').mockImplementation((() => {
       throw new Error('process.exit called');
@@ -170,10 +166,7 @@ describe('apps/config', () => {
       config: (...args: unknown[]) => dotenvConfigMock(...args),
     }));
 
-    expect(() => {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      require('@dist/apps/config');
-    }).toThrow('process.exit called');
+    await expect(import('@dist/apps/config')).rejects.toThrow('process.exit called');
 
     expect(errorSpy).toHaveBeenCalled();
     expect(exitSpy).toHaveBeenCalledWith(1);
@@ -181,7 +174,7 @@ describe('apps/config', () => {
     exitSpy.mockRestore();
   });
 
-  it('logs non-zod validation errors and exits', () => {
+  it('logs non-zod validation errors and exits', async () => {
     const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
     const exitSpy = jest.spyOn(process, 'exit').mockImplementation((() => {
       throw new Error('process.exit called');
@@ -218,10 +211,7 @@ describe('apps/config', () => {
       config: (...args: unknown[]) => dotenvConfigMock(...args),
     }));
 
-    expect(() => {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      require('@dist/apps/config');
-    }).toThrow('process.exit called');
+    await expect(import('@dist/apps/config')).rejects.toThrow('process.exit called');
 
     expect(fakeSafeParse).toHaveBeenCalledTimes(1);
     expect(errorSpy).toHaveBeenCalledWith('❌ Environment variable validation failed:\n');

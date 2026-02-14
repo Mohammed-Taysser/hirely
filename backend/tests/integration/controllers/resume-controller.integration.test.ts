@@ -1,4 +1,5 @@
 import { failureResult, successResult } from '../../helpers/test-fixtures';
+import { NotFoundError, ValidationError } from '@dist/modules/shared/application/app-error';
 
 const mockGetResumesExecute = jest.fn();
 const mockGetResumesListExecute = jest.fn();
@@ -6,6 +7,8 @@ const mockGetResumeByIdExecute = jest.fn();
 const mockGetResumeSnapshotsExecute = jest.fn();
 const mockGetResumeExportsExecute = jest.fn();
 const mockGetExportStatusExecute = jest.fn();
+const mockRetryFailedExportExecute = jest.fn();
+const mockRetryFailedExportEmailJobExecute = jest.fn();
 const mockGetResumeExportStatusExecute = jest.fn();
 const mockExportResumeExecute = jest.fn();
 const mockEnqueueResumeExportExecute = jest.fn();
@@ -22,6 +25,10 @@ jest.mock('@dist/apps/container', () => ({
     getResumeSnapshotsUseCase: { execute: (...args: unknown[]) => mockGetResumeSnapshotsExecute(...args) },
     getResumeExportsUseCase: { execute: (...args: unknown[]) => mockGetResumeExportsExecute(...args) },
     getExportStatusUseCase: { execute: (...args: unknown[]) => mockGetExportStatusExecute(...args) },
+    retryFailedExportUseCase: { execute: (...args: unknown[]) => mockRetryFailedExportExecute(...args) },
+    retryFailedExportEmailJobUseCase: {
+      execute: (...args: unknown[]) => mockRetryFailedExportEmailJobExecute(...args),
+    },
     getResumeExportStatusUseCase: {
       execute: (...args: unknown[]) => mockGetResumeExportStatusExecute(...args),
     },
@@ -36,10 +43,7 @@ jest.mock('@dist/apps/container', () => ({
   },
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const resumeController = require('@dist/modules/resume/presentation/resume.controller').default;
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { ValidationError, NotFoundError } = require('@dist/modules/shared/application/app-error');
+let resumeController: typeof import('@dist/modules/resume/presentation/resume.controller').default;
 
 const buildResponse = () => ({
   status: jest.fn().mockReturnThis(),
@@ -49,6 +53,10 @@ const buildResponse = () => ({
 });
 
 describe('resume controller integration', () => {
+  beforeAll(async () => {
+    ({ default: resumeController } = await import('@dist/modules/resume/presentation/resume.controller'));
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -395,6 +403,93 @@ describe('resume controller integration', () => {
     expect((thrown as { statusCode?: number }).statusCode).toBe(404);
   });
 
+  it('retryFailedExport maps user and export id', async () => {
+    mockRetryFailedExportExecute.mockResolvedValue(
+      successResult({ exportId: 'export-1', status: 'PENDING' })
+    );
+
+    const req = {
+      user: { id: 'user-1', planId: 'plan-1' },
+      parsedParams: { exportId: 'export-1' },
+    };
+    const res = buildResponse();
+
+    await resumeController.retryFailedExport(req, res);
+
+    expect(mockRetryFailedExportExecute).toHaveBeenCalledWith({
+      userId: 'user-1',
+      exportId: 'export-1',
+    });
+    expect(res.status).toHaveBeenCalledWith(200);
+  });
+
+  it('retryFailedExport throws mapped error when use case fails', async () => {
+    mockRetryFailedExportExecute.mockResolvedValue(
+      failureResult(new ValidationError('Retry not allowed'))
+    );
+
+    const req = {
+      user: { id: 'user-1', planId: 'plan-1' },
+      parsedParams: { exportId: 'export-1' },
+    };
+    const res = buildResponse();
+
+    let thrown: unknown;
+    try {
+      await resumeController.retryFailedExport(req, res);
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect((thrown as { statusCode?: number }).statusCode).toBe(400);
+  });
+
+  it('retryFailedExportEmailJob maps user and failed job id', async () => {
+    mockRetryFailedExportEmailJobExecute.mockResolvedValue(
+      successResult({
+        failedJobId: 'log-1',
+        exportId: 'export-1',
+        to: 'person@example.com',
+        reason: 'free-tier-export',
+      })
+    );
+
+    const req = {
+      user: { id: 'user-1', planId: 'plan-1' },
+      parsedParams: { jobId: 'log-1' },
+    };
+    const res = buildResponse();
+
+    await resumeController.retryFailedExportEmailJob(req, res);
+
+    expect(mockRetryFailedExportEmailJobExecute).toHaveBeenCalledWith({
+      userId: 'user-1',
+      failedJobId: 'log-1',
+    });
+    expect(res.status).toHaveBeenCalledWith(200);
+  });
+
+  it('retryFailedExportEmailJob throws mapped error when use case fails', async () => {
+    mockRetryFailedExportEmailJobExecute.mockResolvedValue(
+      failureResult(new NotFoundError('Failed export email job not found'))
+    );
+
+    const req = {
+      user: { id: 'user-1', planId: 'plan-1' },
+      parsedParams: { jobId: 'log-1' },
+    };
+    const res = buildResponse();
+
+    let thrown: unknown;
+    try {
+      await resumeController.retryFailedExportEmailJob(req, res);
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect((thrown as { statusCode?: number }).statusCode).toBe(404);
+  });
+
   it('updateResume maps optional payload and returns success', async () => {
     mockUpdateResumeExecute.mockResolvedValue(
       successResult({
@@ -531,6 +626,7 @@ describe('resume controller integration', () => {
     expect(mockEnqueueResumeExportExecute).toHaveBeenCalledWith({
       user: { id: 'user-1', planId: 'plan-1' },
       resumeId: 'resume-1',
+      idempotencyKey: undefined,
     });
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(
@@ -559,6 +655,30 @@ describe('resume controller integration', () => {
     }
 
     expect((thrown as { statusCode?: number }).statusCode).toBe(400);
+  });
+
+  it('enqueueExport forwards idempotencyKey when provided', async () => {
+    mockEnqueueResumeExportExecute.mockResolvedValue(
+      successResult({
+        exportId: 'export-1',
+        delivery: 'download',
+      })
+    );
+
+    const req = {
+      user: { id: 'user-1', planId: 'plan-1' },
+      parsedParams: { resumeId: 'resume-1' },
+      parsedBody: { store: true, idempotencyKey: 'idem-key-2026-02-14-1' },
+    };
+    const res = buildResponse();
+
+    await resumeController.enqueueExport(req, res);
+
+    expect(mockEnqueueResumeExportExecute).toHaveBeenCalledWith({
+      user: { id: 'user-1', planId: 'plan-1' },
+      resumeId: 'resume-1',
+      idempotencyKey: 'idem-key-2026-02-14-1',
+    });
   });
 
   it('exportResume sends PDF response payload', async () => {

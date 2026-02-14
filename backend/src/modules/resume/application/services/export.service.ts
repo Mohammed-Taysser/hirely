@@ -1,5 +1,9 @@
 import { IActivityService } from '@/modules/activity/application/services/activity.service.interface';
 import { IBillingService } from '@/modules/billing/application/services/billing.service.interface';
+import {
+  hasReachedExportLimit,
+  requirePlanUsageLimits,
+} from '@/modules/plan/application/policies/plan-limit.policy';
 import { IPlanLimitQueryRepository } from '@/modules/plan/application/repositories/plan-limit.query.repository.interface';
 import {
   canDirectDownload,
@@ -47,8 +51,12 @@ export class ExportService implements IExportService {
     private readonly resumeTemplateRenderer: IResumeTemplateRenderer
   ) {}
 
-  async createExportRecord(userId: string, snapshotId: string): Promise<ExportRecord> {
-    return this.resumeExportRepository.create(userId, snapshotId);
+  async createExportRecord(
+    userId: string,
+    snapshotId: string,
+    options?: { idempotencyKey?: string }
+  ): Promise<ExportRecord> {
+    return this.resumeExportRepository.create(userId, snapshotId, options);
   }
 
   async markReady(
@@ -64,12 +72,10 @@ export class ExportService implements IExportService {
 
   async enforceExportLimit(userId: string, planId: string): Promise<void> {
     const planLimit = await this.planLimitQueryRepository.findByPlanId(planId);
-    if (!planLimit) {
-      throw new ForbiddenError('Plan limits are not configured');
-    }
+    const planUsageLimits = requirePlanUsageLimits(planLimit);
 
     const exportCount = await this.resumeExportRepository.countByUser(userId);
-    if (exportCount >= planLimit.maxExports) {
+    if (hasReachedExportLimit(exportCount, planUsageLimits.maxExports)) {
       throw new ForbiddenError('Export limit reached for your plan');
     }
   }

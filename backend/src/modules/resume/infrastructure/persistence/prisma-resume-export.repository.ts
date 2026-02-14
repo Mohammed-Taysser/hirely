@@ -1,16 +1,37 @@
+import { Prisma } from '@generated-prisma';
+
 import prisma from '@/apps/prisma';
 import { IResumeExportRepository } from '@/modules/resume/application/repositories/resume-export.repository.interface';
 import { ExportRecord } from '@/modules/resume/application/services/export.service.interface';
+import { ConflictError } from '@/modules/shared/application/app-error';
 
 export class PrismaResumeExportRepository implements IResumeExportRepository {
-  async create(userId: string, snapshotId: string): Promise<ExportRecord> {
-    return prisma.resumeExport.create({
-      data: {
-        userId,
-        snapshotId,
-        status: 'PENDING',
-      },
-    });
+  async create(
+    userId: string,
+    snapshotId: string,
+    options?: { idempotencyKey?: string }
+  ): Promise<ExportRecord> {
+    try {
+      return await prisma.resumeExport.create({
+        data: {
+          userId,
+          snapshotId,
+          idempotencyKey: options?.idempotencyKey,
+          status: 'PENDING',
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002' &&
+        Array.isArray(error.meta?.target) &&
+        error.meta.target.includes('userId') &&
+        error.meta.target.includes('idempotencyKey')
+      ) {
+        throw new ConflictError('Idempotency key already used');
+      }
+      throw error;
+    }
   }
 
   async markReady(
@@ -26,6 +47,16 @@ export class PrismaResumeExportRepository implements IResumeExportRepository {
         sizeBytes,
         expiresAt,
         status: 'READY',
+        error: null,
+      },
+    });
+  }
+
+  async markPending(exportId: string): Promise<ExportRecord> {
+    return prisma.resumeExport.update({
+      where: { id: exportId },
+      data: {
+        status: 'PENDING',
         error: null,
       },
     });

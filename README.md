@@ -13,6 +13,7 @@ Hirely is a resume builder and export service with plan-based limits and backgro
 - Export delivery: direct download for paid tiers and email delivery for free tier
 - Bulk apply flow with queue-backed email delivery
 - Plan and limit management
+- Dead-letter requeue endpoints for failed export and failed export-email jobs
 
 ## Architecture
 
@@ -49,11 +50,13 @@ Export
 
 1. Direct download -> generates PDF buffer immediately.
 2. Async export -> creates export record, enqueues PDF job, worker stores PDF and queues email for free tier.
+3. Async export supports optional `idempotencyKey` to safely retry without creating duplicate export jobs.
 
 Workers
 
 - `backend/src/jobs/workers/pdf.worker.ts` handles PDF generation and storage.
 - `backend/src/jobs/workers/email.worker.ts` handles sending export emails.
+- `backend/src/jobs/workers/export-cleanup.worker.ts` handles expired export cleanup.
 
 ## Data Model (High-Level)
 
@@ -87,6 +90,11 @@ Workers
 - `PLAN_CHANGE_INTERVAL_SECONDS`
 - `EXPORT_CLEANUP_INTERVAL_SECONDS`
 - `EXPORT_CLEANUP_BATCH_SIZE`
+- `EXPORT_CLEANUP_DRY_RUN`
+- `EXPORT_ALERT_WINDOW_MINUTES`
+- `EXPORT_ALERT_MIN_EVENTS`
+- `EXPORT_ALERT_FAILURE_RATIO`
+- `EXPORT_ALERT_COOLDOWN_SECONDS`
 - `EXPORT_JOB_ATTEMPTS`
 - `EXPORT_JOB_BACKOFF_MS`
 - `EXPORT_JOB_KEEP_COMPLETED`

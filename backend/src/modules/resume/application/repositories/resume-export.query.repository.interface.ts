@@ -3,8 +3,10 @@ import { DateRangeInput } from '@/modules/shared/application/filters';
 
 export interface ResumeExportDto {
   id: string;
+  resumeId: string;
   snapshotId: string;
   userId: string;
+  idempotencyKey: string | null;
   status: ExportStatus;
   url: string | null;
   sizeBytes: number | null;
@@ -38,4 +40,5 @@ export interface IResumeExportQueryRepository {
     resumeId: string,
     exportId: string
   ): Promise<ResumeExportDto | null>;
+  findByIdempotencyKey(userId: string, idempotencyKey: string): Promise<ResumeExportDto | null>;
 }

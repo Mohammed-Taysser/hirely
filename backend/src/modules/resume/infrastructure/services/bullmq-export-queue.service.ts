@@ -1,5 +1,6 @@
 import CONFIG from '@/apps/config';
 import pdfQueue from '@/jobs/queues/pdf.queue';
+import { parsePdfExportQueuePayload } from '@/modules/resume/application/contracts/export-queue.contract';
 import {
   ExportQueueJob,
   IExportQueueService,
@@ -7,7 +8,9 @@ import {
 
 export class BullmqExportQueueService implements IExportQueueService {
   async enqueuePdf(job: ExportQueueJob): Promise<void> {
-    await pdfQueue.add('generate', job, {
+    const payload = parsePdfExportQueuePayload(job);
+
+    await pdfQueue.add('generate', payload, {
       attempts: CONFIG.EXPORT_JOB_ATTEMPTS,
       backoff: { type: 'exponential', delay: CONFIG.EXPORT_JOB_BACKOFF_MS },
       removeOnComplete: CONFIG.EXPORT_JOB_KEEP_COMPLETED,

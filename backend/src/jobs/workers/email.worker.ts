@@ -5,6 +5,7 @@ import {
   sendExportEmailUseCase,
   systemLogService,
 } from '@/apps/worker-containers/email-worker.container';
+import { parseExportEmailQueuePayload } from '@/modules/resume/application/contracts/export-queue.contract';
 import { SystemLogInput } from '@/modules/system/application/services/system-log.service.interface';
 import { SystemActions } from '@/modules/system/application/system.actions';
 import { QUEUE_NAMES } from '@/shared/constants';
@@ -22,14 +23,15 @@ export const startEmailWorker = () => {
   return new Worker(
     QUEUE_NAMES.email,
     async (job) => {
-      const { exportId, userId, to, recipient, reason } = job.data as {
-        exportId: string;
-        userId: string;
-        to: string;
-        recipient?: { name?: string; company?: string; message?: string };
-        reason: 'free-tier-export' | 'bulk-apply';
-      };
+      const { exportId, userId, to, recipient, reason } = parseExportEmailQueuePayload(job.data);
       const correlationId = `email:${job.id}`;
+      const recipientInput = recipient
+        ? {
+            name: recipient.name,
+            company: recipient.company,
+            message: recipient.message,
+          }
+        : undefined;
 
       await logSystem({
         level: 'info',
@@ -50,7 +52,7 @@ export const startEmailWorker = () => {
         exportId,
         userId,
         to,
-        recipient,
+        recipient: recipientInput,
         reason,
       });
 

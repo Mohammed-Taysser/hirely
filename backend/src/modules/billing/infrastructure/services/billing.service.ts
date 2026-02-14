@@ -1,8 +1,11 @@
-import prisma from '@/apps/prisma';
 import { IBillingService } from '@/modules/billing/application/services/billing.service.interface';
+import {
+  exceedsDailyUploadLimit,
+  requirePlanUsageLimits,
+} from '@/modules/plan/application/policies/plan-limit.policy';
+import { IPlanLimitQueryRepository } from '@/modules/plan/application/repositories/plan-limit.query.repository.interface';
+import { IResumeExportRepository } from '@/modules/resume/application/repositories/resume-export.repository.interface';
 import { ForbiddenError } from '@/modules/shared/application/app-error';
-
-const MB_TO_BYTES = 1024 * 1024;
 
 const getUtcDayRange = (now = new Date()) => {
   const start = new Date(now);
@@ -15,35 +18,27 @@ const getUtcDayRange = (now = new Date()) => {
 };
 
 export class BillingService implements IBillingService {
+  constructor(
+    private readonly planLimitQueryRepository: IPlanLimitQueryRepository,
+    private readonly resumeExportRepository: IResumeExportRepository
+  ) {}
+
   async enforceDailyUploadLimit(userId: string, planId: string, size: number): Promise<void> {
     if (!userId || !planId || size <= 0) {
       return;
     }
 
-    const planLimit = await prisma.planLimit.findUnique({ where: { planId } });
-    if (!planLimit) {
-      throw new ForbiddenError('Plan limits are not configured');
-    }
+    const planLimit = await this.planLimitQueryRepository.findByPlanId(planId);
+    const planUsageLimits = requirePlanUsageLimits(planLimit);
 
-    const dailyLimitBytes = planLimit.dailyUploadMb * MB_TO_BYTES;
     const { start, end } = getUtcDayRange();
-    const uploadedBytes = await prisma.resumeExport.aggregate({
-      where: {
-        userId,
-        status: 'READY',
-        createdAt: {
-          gte: start,
-          lte: end,
-        },
-      },
-      _sum: {
-        sizeBytes: true,
-      },
-    });
+    const usedBytes = await this.resumeExportRepository.getUploadedBytesByUserInRange(
+      userId,
+      start,
+      end
+    );
 
-    const usedBytes = uploadedBytes._sum.sizeBytes ?? 0;
-
-    if (usedBytes + size > dailyLimitBytes) {
+    if (exceedsDailyUploadLimit(usedBytes, size, planUsageLimits.dailyUploadBytes)) {
       throw new ForbiddenError('Daily upload limit reached for your plan');
     }
   }

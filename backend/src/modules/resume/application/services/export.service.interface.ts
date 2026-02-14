@@ -6,6 +6,7 @@ export interface ExportRecord {
   id: string;
   snapshotId: string;
   userId: string;
+  idempotencyKey: string | null;
   status: ExportStatus;
   url: string | null;
   sizeBytes: number | null;
@@ -16,7 +17,11 @@ export interface ExportRecord {
 }
 
 export interface IExportService {
-  createExportRecord(userId: string, snapshotId: string): Promise<ExportRecord>;
+  createExportRecord(
+    userId: string,
+    snapshotId: string,
+    options?: { idempotencyKey?: string }
+  ): Promise<ExportRecord>;
   markReady(
     exportId: string,
     storageKey: string,

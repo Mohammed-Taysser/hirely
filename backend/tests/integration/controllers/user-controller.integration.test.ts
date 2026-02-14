@@ -1,4 +1,5 @@
 import { AUTH_CREDENTIAL, failureResult, successResult } from '../../helpers/test-fixtures';
+import { NotFoundError, ValidationError } from '@dist/modules/shared/application/app-error';
 
 const mockGetUsersExecute = jest.fn();
 const mockGetUsersListExecute = jest.fn();
@@ -6,6 +7,7 @@ const mockUpdateUserExecute = jest.fn();
 const mockDeleteUserExecute = jest.fn();
 const mockChangeUserPlanExecute = jest.fn();
 const mockGetUserByIdExecute = jest.fn();
+const mockGetUserPlanUsageExecute = jest.fn();
 const mockCreateUserWithPlanExecute = jest.fn();
 
 jest.mock('@dist/apps/container', () => ({
@@ -16,16 +18,14 @@ jest.mock('@dist/apps/container', () => ({
     deleteUserUseCase: { execute: (...args: unknown[]) => mockDeleteUserExecute(...args) },
     changeUserPlanUseCase: { execute: (...args: unknown[]) => mockChangeUserPlanExecute(...args) },
     getUserByIdQueryUseCase: { execute: (...args: unknown[]) => mockGetUserByIdExecute(...args) },
+    getUserPlanUsageUseCase: { execute: (...args: unknown[]) => mockGetUserPlanUsageExecute(...args) },
     createUserWithPlanUseCase: {
       execute: (...args: unknown[]) => mockCreateUserWithPlanExecute(...args),
     },
   },
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const userController = require('@dist/modules/user/presentation/user.controller').default;
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { NotFoundError, ValidationError } = require('@dist/modules/shared/application/app-error');
+let userController: typeof import('@dist/modules/user/presentation/user.controller').default;
 
 const buildResponse = () => ({
   status: jest.fn().mockReturnThis(),
@@ -33,6 +33,10 @@ const buildResponse = () => ({
 });
 
 describe('user controller integration', () => {
+  beforeAll(async () => {
+    ({ default: userController } = await import('@dist/modules/user/presentation/user.controller'));
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -156,6 +160,49 @@ describe('user controller integration', () => {
         }),
       })
     );
+  });
+
+  it('getPlanUsage returns usage payload for authenticated user', async () => {
+    mockGetUserPlanUsageExecute.mockResolvedValue(
+      successResult({
+        plan: { id: 'plan-1', code: 'PRO', name: 'Pro' },
+        limits: { maxResumes: 10, maxExports: 20, dailyUploadMb: 100, dailyUploadBytes: 104857600 },
+        usage: { resumesUsed: 2, exportsUsed: 5, dailyUploadUsedBytes: 1024 },
+        remaining: { resumes: 8, exports: 15, dailyUploadBytes: 104856576 },
+      })
+    );
+
+    const req = { user: { id: 'user-1' } };
+    const res = buildResponse();
+
+    await userController.getPlanUsage(req, res);
+
+    expect(mockGetUserPlanUsageExecute).toHaveBeenCalledWith({ userId: 'user-1' });
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        message: 'User plan usage fetched successfully',
+      })
+    );
+  });
+
+  it('getPlanUsage throws mapped error when use case fails', async () => {
+    mockGetUserPlanUsageExecute.mockResolvedValue(
+      failureResult(new NotFoundError('User plan not found'))
+    );
+
+    const req = { user: { id: 'user-1' } };
+    const res = buildResponse();
+
+    let thrown: unknown;
+    try {
+      await userController.getPlanUsage(req, res);
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect((thrown as { statusCode?: number }).statusCode).toBe(404);
   });
 
   it('getUsers returns paginated users and builds filters', async () => {

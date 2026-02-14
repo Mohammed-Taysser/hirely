@@ -8,7 +8,7 @@ type SetupResult = {
   validateRequest: jest.Mock;
 };
 
-const setup = (): SetupResult => {
+const setup = async (): Promise<SetupResult> => {
   jest.resetModules();
 
   const controller = {
@@ -49,15 +49,14 @@ const setup = (): SetupResult => {
     default: validateRequest,
   }));
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const authRoutes = require('@dist/modules/auth/presentation/auth.route').default;
+  const { default: authRoutes } = await import('@dist/modules/auth/presentation/auth.route');
 
   return { authRoutes, controller, dto, authenticateMiddleware, validateRequest };
 };
 
 describe('auth route integration', () => {
-  it('register/login/refresh routes apply validateRequest then controller', () => {
-    const { authRoutes, controller, dto, validateRequest } = setup();
+  it('register/login/refresh routes apply validateRequest then controller', async () => {
+    const { authRoutes, controller, dto, validateRequest } = await setup();
 
     const registerRoute = findRouteLayer(authRoutes, 'post', '/register');
     expect((registerRoute.stack[0].handle as { __schema: unknown }).__schema).toBe(dto.register);
@@ -78,8 +77,8 @@ describe('auth route integration', () => {
     expect(validateRequest).toHaveBeenCalledWith(dto.refreshToken);
   });
 
-  it('switch-user route applies auth then validateRequest then controller', () => {
-    const { authRoutes, controller, dto, authenticateMiddleware, validateRequest } = setup();
+  it('switch-user route applies auth then validateRequest then controller', async () => {
+    const { authRoutes, controller, dto, authenticateMiddleware, validateRequest } = await setup();
 
     const switchRoute = findRouteLayer(authRoutes, 'post', '/switch-user');
 

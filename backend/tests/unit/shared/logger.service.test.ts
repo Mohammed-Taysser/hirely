@@ -13,7 +13,9 @@ type LoadedLogger = {
   mkdirSyncMock: jest.Mock;
 };
 
-const loadLoggerService = (params?: { nodeEnv?: 'test' | 'production' | 'development'; dirExists?: boolean }): LoadedLogger => {
+const loadLoggerService = async (
+  params?: { nodeEnv?: 'test' | 'production' | 'development'; dirExists?: boolean }
+): Promise<LoadedLogger> => {
   jest.resetModules();
 
   const pinoLogger = {
@@ -48,43 +50,44 @@ const loadLoggerService = (params?: { nodeEnv?: 'test' | 'production' | 'develop
     },
   }));
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const loggerService = require('@dist/modules/shared/infrastructure/services/logger.service').default;
+  const { default: loggerService } = await import(
+    '@dist/modules/shared/infrastructure/services/logger.service'
+  );
 
   return { loggerService, pinoFactory, pinoLogger, mkdirSyncMock };
 };
 
 describe('logger.service', () => {
-  it('creates logs directory when missing', () => {
-    const { mkdirSyncMock } = loadLoggerService({ dirExists: false });
+  it('creates logs directory when missing', async () => {
+    const { mkdirSyncMock } = await loadLoggerService({ dirExists: false });
     expect(mkdirSyncMock).toHaveBeenCalledTimes(1);
   });
 
-  it('uses pino-pretty transport in development', () => {
-    const { pinoFactory } = loadLoggerService({ nodeEnv: 'development' });
+  it('uses pino-pretty transport in development', async () => {
+    const { pinoFactory } = await loadLoggerService({ nodeEnv: 'development' });
     const options = pinoFactory.mock.calls[0][0];
 
     expect(options.transport.target).toBe('pino-pretty');
   });
 
-  it('uses silent logger in test environment', () => {
-    const { pinoFactory } = loadLoggerService({ nodeEnv: 'test' });
+  it('uses silent logger in test environment', async () => {
+    const { pinoFactory } = await loadLoggerService({ nodeEnv: 'test' });
     const options = pinoFactory.mock.calls[0][0];
 
     expect(options.level).toBe('silent');
     expect(options.transport).toBeUndefined();
   });
 
-  it('uses file transport in production', () => {
-    const { pinoFactory } = loadLoggerService({ nodeEnv: 'production' });
+  it('uses file transport in production', async () => {
+    const { pinoFactory } = await loadLoggerService({ nodeEnv: 'production' });
     const options = pinoFactory.mock.calls[0][0];
 
     expect(options.transport.target).toBe('pino/file');
     expect(options.transport.options.destination).toBe('./logs/app.log');
   });
 
-  it('delegates info/error/warn with and without metadata', () => {
-    const { loggerService, pinoLogger } = loadLoggerService();
+  it('delegates info/error/warn with and without metadata', async () => {
+    const { loggerService, pinoLogger } = await loadLoggerService();
 
     loggerService.info('info-message');
     loggerService.info('info-message-meta', { context: 'ctx' });

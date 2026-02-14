@@ -1,5 +1,4 @@
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { Entity } = require('@dist/modules/shared/domain/base/entity.base');
+import { Entity } from '@dist/modules/shared/domain/base/entity.base';
 
 class SampleEntity extends Entity {
   constructor(props: { value: string }, id?: string) {

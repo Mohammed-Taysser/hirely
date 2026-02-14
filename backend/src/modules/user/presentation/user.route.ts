@@ -9,6 +9,7 @@ import validateRequest from '@/middleware/validate-request.middleware';
 const userRoutes = Router();
 
 userRoutes.get('/me', authenticateMiddleware, controller.getProfile);
+userRoutes.get('/me/plan-usage', authenticateMiddleware, controller.getPlanUsage);
 
 userRoutes.get(
   '/basic',

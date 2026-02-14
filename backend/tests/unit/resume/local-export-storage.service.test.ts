@@ -9,8 +9,9 @@ describe('LocalExportStorageService', () => {
     process.env.UPLOADS_DIR = tempDir;
 
     jest.resetModules();
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { LocalExportStorageService } = require('@dist/modules/resume/infrastructure/services/local-export-storage.service');
+    const { LocalExportStorageService } = await import(
+      '@dist/modules/resume/infrastructure/services/local-export-storage.service'
+    );
 
     const service = new LocalExportStorageService();
     const result = await service.uploadBuffer(Buffer.from('pdf'), 'user/exports/file.pdf', {
@@ -30,8 +31,9 @@ describe('LocalExportStorageService', () => {
     process.env.UPLOADS_DIR = tempDir;
 
     jest.resetModules();
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { LocalExportStorageService } = require('@dist/modules/resume/infrastructure/services/local-export-storage.service');
+    const { LocalExportStorageService } = await import(
+      '@dist/modules/resume/infrastructure/services/local-export-storage.service'
+    );
 
     const service = new LocalExportStorageService();
     const url = await service.getSignedDownloadUrl('user/exports/file.pdf', 60);
@@ -45,8 +47,9 @@ describe('LocalExportStorageService', () => {
     process.env.UPLOADS_DIR = tempDir;
 
     jest.resetModules();
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { LocalExportStorageService } = require('@dist/modules/resume/infrastructure/services/local-export-storage.service');
+    const { LocalExportStorageService } = await import(
+      '@dist/modules/resume/infrastructure/services/local-export-storage.service'
+    );
 
     const service = new LocalExportStorageService();
     await service.uploadBuffer(Buffer.from('pdf'), 'user/exports/file-to-delete.pdf', {

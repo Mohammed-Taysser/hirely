@@ -183,7 +183,7 @@ describe('CreateResumeUseCase', () => {
     });
 
     expect(result.isFailure).toBe(true);
-    expect(result.error).toBeInstanceOf(UnexpectedError);
+    expect(result.error).toBeInstanceOf(ForbiddenError);
   });
 
   it('fails when template required sections are missing', async () => {

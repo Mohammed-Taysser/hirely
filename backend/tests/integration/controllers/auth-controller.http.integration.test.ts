@@ -7,19 +7,16 @@ const mockLoginExecute = jest.fn();
 const mockRefreshTokenExecute = jest.fn();
 const mockSwitchUserExecute = jest.fn();
 
-const renderErrorResponse = (err: unknown, req: Record<string, unknown>) => {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const errorHandlerMiddleware = require('@dist/middleware/error-handler.middleware').default;
-  const response = {
-    status: jest.fn().mockReturnThis(),
-    json: jest.fn(),
+type SetupAuthRouter = {
+  authRoutes: { stack?: unknown[] };
+  UnauthorizedError: new (error?: unknown) => { message: string };
+  renderErrorResponse: (err: unknown, req: Record<string, unknown>) => {
+    status: jest.Mock;
+    json: jest.Mock;
   };
-
-  errorHandlerMiddleware(err, req, response, (() => {}) as never);
-  return response;
 };
 
-const setupRouter = () => {
+const setupRouter = async (): Promise<SetupAuthRouter> => {
   jest.resetModules();
   mockRegisterExecute.mockReset();
   mockLoginExecute.mockReset();
@@ -40,13 +37,26 @@ const setupRouter = () => {
     default: (_req: unknown, _res: unknown, next: (err?: unknown) => void) => next(),
   }));
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  return require('@dist/modules/auth/presentation/auth.route').default;
+  const { default: authRoutes } = await import('@dist/modules/auth/presentation/auth.route');
+  const { default: errorHandlerMiddleware } = await import('@dist/middleware/error-handler.middleware');
+  const { UnauthorizedError } = await import('@dist/modules/shared/application/app-error');
+
+  const renderErrorResponse = (err: unknown, req: Record<string, unknown>) => {
+    const response = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn(),
+    };
+
+    errorHandlerMiddleware(err, req, response, (() => {}) as never);
+    return response;
+  };
+
+  return { authRoutes, UnauthorizedError, renderErrorResponse };
 };
 
 describe('auth controller http integration', () => {
   it('returns 400 for invalid login payload before reaching use case', async () => {
-    const authRoutes = setupRouter();
+    const { authRoutes, renderErrorResponse } = await setupRouter();
     const route = findRouteLayer(authRoutes, 'post', '/login');
     const req = {
       body: {
@@ -67,7 +77,7 @@ describe('auth controller http integration', () => {
   });
 
   it('returns 201 for successful registration', async () => {
-    const authRoutes = setupRouter();
+    const { authRoutes } = await setupRouter();
     const route = findRouteLayer(authRoutes, 'post', '/register');
     mockRegisterExecute.mockResolvedValue(
       successResult({
@@ -106,10 +116,8 @@ describe('auth controller http integration', () => {
   });
 
   it('maps failed refresh-token result to 401', async () => {
-    const authRoutes = setupRouter();
+    const { authRoutes, UnauthorizedError, renderErrorResponse } = await setupRouter();
     const route = findRouteLayer(authRoutes, 'post', '/refresh-token');
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { UnauthorizedError } = require('@dist/modules/shared/application/app-error');
     mockRefreshTokenExecute.mockResolvedValue(failureResult(new UnauthorizedError('bad token')));
 
     const request = {

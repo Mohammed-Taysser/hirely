@@ -1,14 +1,5 @@
+import { PlanLimitDto } from '@/modules/plan/application/dto/plan-limit.dto';
 import { DateRangeInput } from '@/modules/shared/application/filters';
-
-export interface PlanLimitDto {
-  id: string;
-  maxResumes: number;
-  maxExports: number;
-  dailyUploadMb: number;
-  planId: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
 
 export interface PlanDto {
   id: string;

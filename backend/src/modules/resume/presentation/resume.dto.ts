@@ -103,6 +103,7 @@ const enqueueExportSchema = {
   params: getResumeByIdSchema.params,
   body: z.object({
     store: z.boolean().default(true),
+    idempotencyKey: z.string().trim().min(8).max(128).optional(),
   }),
 };
 
@@ -116,6 +117,18 @@ const getResumeExportStatusSchema = {
 const exportStatusSchema = {
   params: z.object({
     exportId: z.uuid(),
+  }),
+};
+
+const retryFailedExportSchema = {
+  params: z.object({
+    exportId: z.uuid(),
+  }),
+};
+
+const retryFailedExportEmailJobSchema = {
+  params: z.object({
+    jobId: z.uuid(),
   }),
 };
 
@@ -157,6 +170,8 @@ const resumeDTO = {
   getFailedExports: getFailedExportsSchema,
   getFailedExportEmailJobs: getFailedExportEmailJobsSchema,
   exportStatus: exportStatusSchema,
+  retryFailedExport: retryFailedExportSchema,
+  retryFailedExportEmailJob: retryFailedExportEmailJobSchema,
   exportResume: exportResumeSchema,
   enqueueExport: enqueueExportSchema,
   getResumeExportStatus: getResumeExportStatusSchema,
@@ -173,6 +188,8 @@ export type ResumeDTO = {
   getFailedExports: typeof getFailedExportsSchema;
   getFailedExportEmailJobs: typeof getFailedExportEmailJobsSchema;
   exportStatus: typeof exportStatusSchema;
+  retryFailedExport: typeof retryFailedExportSchema;
+  retryFailedExportEmailJob: typeof retryFailedExportEmailJobSchema;
   exportResume: typeof exportResumeSchema;
   enqueueExport: typeof enqueueExportSchema;
   getResumeExportStatus: typeof getResumeExportStatusSchema;

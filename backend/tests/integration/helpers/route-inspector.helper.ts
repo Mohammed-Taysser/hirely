@@ -1,15 +1,15 @@
 type RouterLayer = {
   route?: {
-    path: string;
-    methods: Record<string, boolean>;
-    stack: Array<{ handle: unknown }>;
+    path?: string;
+    methods?: Record<string, boolean>;
+    stack?: Array<{ handle: unknown }>;
   };
 };
 
-const findRouteLayer = (router: { stack: RouterLayer[] }, method: string, path: string) => {
+const findRouteLayer = (router: { stack?: RouterLayer[] }, method: string, path: string) => {
   const normalizedMethod = method.toLowerCase();
 
-  const layer = router.stack.find(
+  const layer = router.stack?.find(
     (item) =>
       item.route &&
       item.route.path === path &&

@@ -13,7 +13,7 @@ type LoadedRateLimiter = {
   tooManyRequests: jest.Mock;
 };
 
-const loadRateLimiter = (): LoadedRateLimiter => {
+const loadRateLimiter = async (): Promise<LoadedRateLimiter> => {
   jest.resetModules();
 
   const cacheService = {
@@ -41,15 +41,14 @@ const loadRateLimiter = (): LoadedRateLimiter => {
     },
   }));
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const rateLimiter = require('@dist/middleware/rate-limit.middleware').default;
+  const { default: rateLimiter } = await import('@dist/middleware/rate-limit.middleware');
 
   return { rateLimiter, cacheService, loggerError, tooManyRequests };
 };
 
 describe('rate-limit middleware', () => {
   it('sets headers and allows request when within limit', async () => {
-    const { rateLimiter, cacheService } = loadRateLimiter();
+    const { rateLimiter, cacheService } = await loadRateLimiter();
     cacheService.formatKey.mockReturnValue('redis:rate-limit:ip:127.0.0.1');
     cacheService.incrWithTTL.mockResolvedValue(4);
     cacheService.ttl.mockResolvedValue(19);
@@ -70,7 +69,7 @@ describe('rate-limit middleware', () => {
   });
 
   it('returns too many requests error when limit is exceeded', async () => {
-    const { rateLimiter, cacheService, tooManyRequests } = loadRateLimiter();
+    const { rateLimiter, cacheService, tooManyRequests } = await loadRateLimiter();
     const blockedError = new Error('blocked');
     cacheService.formatKey.mockReturnValue('redis:rate-limit:ip:127.0.0.1');
     cacheService.incrWithTTL.mockResolvedValue(6);
@@ -89,7 +88,7 @@ describe('rate-limit middleware', () => {
   });
 
   it('fails open and logs when cache fails', async () => {
-    const { rateLimiter, cacheService, loggerError } = loadRateLimiter();
+    const { rateLimiter, cacheService, loggerError } = await loadRateLimiter();
     const redisError = new Error('redis unavailable');
     cacheService.formatKey.mockReturnValue('redis:rate-limit:ip:127.0.0.1');
     cacheService.incrWithTTL.mockRejectedValue(redisError);
@@ -106,7 +105,7 @@ describe('rate-limit middleware', () => {
   });
 
   it('uses default max and windowSeconds when omitted', async () => {
-    const { rateLimiter, cacheService } = loadRateLimiter();
+    const { rateLimiter, cacheService } = await loadRateLimiter();
     cacheService.formatKey.mockReturnValue('redis:rate-limit:ip:127.0.0.1');
     cacheService.incrWithTTL.mockResolvedValue(1);
     cacheService.ttl.mockResolvedValue(59);

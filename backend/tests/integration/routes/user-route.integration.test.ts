@@ -1,10 +1,11 @@
 import { findRouteLayer } from '../helpers/route-inspector.helper';
 
-const setup = () => {
+const setup = async () => {
   jest.resetModules();
 
   const controller = {
     getProfile: jest.fn(),
+    getPlanUsage: jest.fn(),
     getUsersList: jest.fn(),
     getUsers: jest.fn(),
     getUserById: jest.fn(),
@@ -46,19 +47,22 @@ const setup = () => {
     default: validateRequest,
   }));
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const userRoutes = require('@dist/modules/user/presentation/user.route').default;
+  const { default: userRoutes } = await import('@dist/modules/user/presentation/user.route');
 
   return { userRoutes, controller, dto, authenticateMiddleware, validateRequest };
 };
 
 describe('user route integration', () => {
-  it('wires protected user endpoints with expected middleware order', () => {
-    const { userRoutes, controller, dto, authenticateMiddleware } = setup();
+  it('wires protected user endpoints with expected middleware order', async () => {
+    const { userRoutes, controller, dto, authenticateMiddleware } = await setup();
 
     const me = findRouteLayer(userRoutes, 'get', '/me');
     expect(me.stack[0].handle).toBe(authenticateMiddleware);
     expect(me.stack[1].handle).toBe(controller.getProfile);
+
+    const planUsage = findRouteLayer(userRoutes, 'get', '/me/plan-usage');
+    expect(planUsage.stack[0].handle).toBe(authenticateMiddleware);
+    expect(planUsage.stack[1].handle).toBe(controller.getPlanUsage);
 
     const basic = findRouteLayer(userRoutes, 'get', '/basic');
     expect(basic.stack[0].handle).toBe(authenticateMiddleware);
@@ -88,8 +92,8 @@ describe('user route integration', () => {
     expect(remove.stack[2].handle).toBe(controller.deleteUser);
   });
 
-  it('keeps list/get-by-id endpoints public but validated', () => {
-    const { userRoutes, controller, dto } = setup();
+  it('keeps list/get-by-id endpoints public but validated', async () => {
+    const { userRoutes, controller, dto } = await setup();
 
     const list = findRouteLayer(userRoutes, 'get', '/');
     expect((list.stack[0].handle as { __schema: unknown }).__schema).toBe(dto.getUsersList);

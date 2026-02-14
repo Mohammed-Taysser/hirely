@@ -37,36 +37,51 @@ export class PrismaResumeExportQueryRepository implements IResumeExportQueryRepo
     const skip = (page - 1) * limit;
     const where = buildResumeExportFilters(filters);
 
-    return prisma.$transaction([
-      prisma.resumeExport.findMany({
-        skip,
-        take: limit,
-        orderBy: { createdAt: 'desc' },
-        where,
-        select: {
-          id: true,
-          snapshotId: true,
-          userId: true,
-          status: true,
-          url: true,
-          sizeBytes: true,
-          error: true,
-          expiresAt: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      }),
-      prisma.resumeExport.count({ where }),
-    ]);
+    return prisma
+      .$transaction([
+        prisma.resumeExport.findMany({
+          skip,
+          take: limit,
+          orderBy: { createdAt: 'desc' },
+          where,
+          select: {
+            id: true,
+            snapshot: { select: { resumeId: true } },
+            snapshotId: true,
+            userId: true,
+            idempotencyKey: true,
+            status: true,
+            url: true,
+            sizeBytes: true,
+            error: true,
+            expiresAt: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        }),
+        prisma.resumeExport.count({ where }),
+      ])
+      .then(([rows, total]) => [
+        rows.map((row) => {
+          const { snapshot, ...rest } = row;
+          return {
+            ...rest,
+            resumeId: snapshot.resumeId,
+          };
+        }),
+        total,
+      ]);
   }
 
   async findById(userId: string, exportId: string): Promise<ResumeExportDto | null> {
-    return prisma.resumeExport.findFirst({
+    const row = await prisma.resumeExport.findFirst({
       where: { id: exportId, userId },
       select: {
         id: true,
+        snapshot: { select: { resumeId: true } },
         snapshotId: true,
         userId: true,
+        idempotencyKey: true,
         status: true,
         url: true,
         sizeBytes: true,
@@ -76,6 +91,16 @@ export class PrismaResumeExportQueryRepository implements IResumeExportQueryRepo
         updatedAt: true,
       },
     });
+
+    if (!row) {
+      return null;
+    }
+
+    const { snapshot, ...rest } = row;
+    return {
+      ...rest,
+      resumeId: snapshot.resumeId,
+    };
   }
 
   async getFailedExportsByUser(
@@ -89,27 +114,40 @@ export class PrismaResumeExportQueryRepository implements IResumeExportQueryRepo
       status: 'FAILED',
     };
 
-    return prisma.$transaction([
-      prisma.resumeExport.findMany({
-        skip,
-        take: limit,
-        orderBy: { createdAt: 'desc' },
-        where,
-        select: {
-          id: true,
-          snapshotId: true,
-          userId: true,
-          status: true,
-          url: true,
-          sizeBytes: true,
-          error: true,
-          expiresAt: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      }),
-      prisma.resumeExport.count({ where }),
-    ]);
+    return prisma
+      .$transaction([
+        prisma.resumeExport.findMany({
+          skip,
+          take: limit,
+          orderBy: { createdAt: 'desc' },
+          where,
+          select: {
+            id: true,
+            snapshot: { select: { resumeId: true } },
+            snapshotId: true,
+            userId: true,
+            idempotencyKey: true,
+            status: true,
+            url: true,
+            sizeBytes: true,
+            error: true,
+            expiresAt: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        }),
+        prisma.resumeExport.count({ where }),
+      ])
+      .then(([rows, total]) => [
+        rows.map((row) => {
+          const { snapshot, ...rest } = row;
+          return {
+            ...rest,
+            resumeId: snapshot.resumeId,
+          };
+        }),
+        total,
+      ]);
   }
 
   async findByIdForResume(
@@ -117,12 +155,14 @@ export class PrismaResumeExportQueryRepository implements IResumeExportQueryRepo
     resumeId: string,
     exportId: string
   ): Promise<ResumeExportDto | null> {
-    return prisma.resumeExport.findFirst({
+    const row = await prisma.resumeExport.findFirst({
       where: { id: exportId, userId, snapshot: { resumeId } },
       select: {
         id: true,
+        snapshot: { select: { resumeId: true } },
         snapshotId: true,
         userId: true,
+        idempotencyKey: true,
         status: true,
         url: true,
         sizeBytes: true,
@@ -132,5 +172,48 @@ export class PrismaResumeExportQueryRepository implements IResumeExportQueryRepo
         updatedAt: true,
       },
     });
+
+    if (!row) {
+      return null;
+    }
+
+    const { snapshot, ...rest } = row;
+    return {
+      ...rest,
+      resumeId: snapshot.resumeId,
+    };
+  }
+
+  async findByIdempotencyKey(
+    userId: string,
+    idempotencyKey: string
+  ): Promise<ResumeExportDto | null> {
+    const row = await prisma.resumeExport.findFirst({
+      where: { userId, idempotencyKey },
+      select: {
+        id: true,
+        snapshot: { select: { resumeId: true } },
+        snapshotId: true,
+        userId: true,
+        idempotencyKey: true,
+        status: true,
+        url: true,
+        sizeBytes: true,
+        error: true,
+        expiresAt: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!row) {
+      return null;
+    }
+
+    const { snapshot, ...rest } = row;
+    return {
+      ...rest,
+      resumeId: snapshot.resumeId,
+    };
   }
 }

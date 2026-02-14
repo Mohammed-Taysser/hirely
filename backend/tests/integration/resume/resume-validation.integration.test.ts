@@ -124,4 +124,66 @@ describe('resume validation integration', () => {
     const response = runErrorHandler(err, request);
     expect(response.status).toHaveBeenCalledWith(400);
   });
+
+  it('accepts enqueue export payload with idempotencyKey', async () => {
+    const request: Record<string, unknown> = {
+      body: {
+        store: true,
+        idempotencyKey: 'idem-key-2026-02-14-1',
+      },
+      query: {},
+      params: { resumeId: '7de625ab-9cf0-44f9-a9f5-f69e828eb963' },
+    };
+
+    const err = await runMiddleware(validateRequest(resumeDTO.enqueueExport), request);
+    expect(err).toBeUndefined();
+    expect(request.parsedBody).toBeDefined();
+  });
+
+  it('returns HTTP 400 for enqueue export payload with short idempotencyKey', async () => {
+    const request = {
+      body: {
+        store: true,
+        idempotencyKey: 'short',
+      },
+      query: {},
+      params: { resumeId: '7de625ab-9cf0-44f9-a9f5-f69e828eb963' },
+      originalUrl: '/api/resumes/7de625ab-9cf0-44f9-a9f5-f69e828eb963/export',
+      method: 'POST',
+    };
+
+    const err = await runMiddleware(validateRequest(resumeDTO.enqueueExport), request);
+    expect(err).toBeDefined();
+
+    const response = runErrorHandler(err, request);
+    expect(response.status).toHaveBeenCalledWith(400);
+  });
+
+  it('accepts retry failed export params', async () => {
+    const request: Record<string, unknown> = {
+      body: {},
+      query: {},
+      params: { exportId: '7de625ab-9cf0-44f9-a9f5-f69e828eb963' },
+    };
+
+    const err = await runMiddleware(validateRequest(resumeDTO.retryFailedExport), request);
+    expect(err).toBeUndefined();
+    expect(request.parsedParams).toBeDefined();
+  });
+
+  it('returns HTTP 400 for invalid retry failed export email job params', async () => {
+    const request = {
+      body: {},
+      query: {},
+      params: { jobId: 'invalid-uuid' },
+      originalUrl: '/api/resumes/exports/failed-emails/invalid-uuid/retry',
+      method: 'POST',
+    };
+
+    const err = await runMiddleware(validateRequest(resumeDTO.retryFailedExportEmailJob), request);
+    expect(err).toBeDefined();
+
+    const response = runErrorHandler(err, request);
+    expect(response.status).toHaveBeenCalledWith(400);
+  });
 });

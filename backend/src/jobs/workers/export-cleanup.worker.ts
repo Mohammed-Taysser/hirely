@@ -5,6 +5,7 @@ import { QUEUE_NAMES } from '@/apps/constant';
 import { redisConnectionOptions } from '@/apps/redis';
 import {
   cleanupExpiredExportsUseCase,
+  evaluateExportFailureAlertsUseCase,
   systemLogService,
 } from '@/apps/worker-containers/export-cleanup-worker.container';
 import exportCleanupQueue from '@/jobs/queues/export-cleanup.queue';
@@ -44,6 +45,7 @@ export const startExportCleanupWorker = () => {
         metadata: {
           intervalSeconds: CONFIG.EXPORT_CLEANUP_INTERVAL_SECONDS,
           batchSize: CONFIG.EXPORT_CLEANUP_BATCH_SIZE,
+          dryRun: CONFIG.EXPORT_CLEANUP_DRY_RUN,
         },
       })
     )
@@ -67,11 +69,13 @@ export const startExportCleanupWorker = () => {
           jobId: job.id,
           correlationId,
           batchSize: CONFIG.EXPORT_CLEANUP_BATCH_SIZE,
+          dryRun: CONFIG.EXPORT_CLEANUP_DRY_RUN,
         },
       });
 
       const result = await cleanupExpiredExportsUseCase.execute({
         batchSize: CONFIG.EXPORT_CLEANUP_BATCH_SIZE,
+        dryRun: CONFIG.EXPORT_CLEANUP_DRY_RUN,
       });
 
       if (result.isFailure) {
@@ -90,6 +94,23 @@ export const startExportCleanupWorker = () => {
       }
 
       const summary = result.getValue();
+      let alertSummary: unknown = null;
+      const alertResult = await evaluateExportFailureAlertsUseCase.execute({});
+      if (alertResult.isFailure) {
+        const error = alertResult.error ?? new Error('Export alert evaluation failed');
+        await logSystem({
+          level: 'error',
+          action: SystemActions.EXPORT_ALERT_EVALUATION_FAILED,
+          metadata: {
+            jobId: job.id,
+            correlationId,
+          },
+          message: error.message,
+        });
+      } else {
+        alertSummary = alertResult.getValue();
+      }
+
       await logSystem({
         level: summary.failed > 0 ? 'warn' : 'info',
         action: SystemActions.EXPORT_CLEANUP_RUN_COMPLETED,
@@ -99,8 +120,12 @@ export const startExportCleanupWorker = () => {
           scanned: summary.scanned,
           deletedRecords: summary.deletedRecords,
           deletedFiles: summary.deletedFiles,
+          wouldDeleteRecords: summary.wouldDeleteRecords,
+          wouldDeleteFiles: summary.wouldDeleteFiles,
+          dryRun: summary.dryRun,
           failed: summary.failed,
           failures: summary.failures,
+          alerts: alertSummary,
         },
       });
     },

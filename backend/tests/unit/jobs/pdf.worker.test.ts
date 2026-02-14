@@ -12,7 +12,7 @@ type WorkerInstance = {
 };
 
 type LoadedPdfWorker = {
-  startPdfWorker: () => WorkerInstance;
+  startPdfWorker: () => unknown;
   workerInstances: WorkerInstance[];
   workerFactory: jest.Mock;
   execute: jest.Mock;
@@ -20,7 +20,7 @@ type LoadedPdfWorker = {
   loggerError: jest.Mock;
 };
 
-const loadPdfWorker = (): LoadedPdfWorker => {
+const loadPdfWorker = async (): Promise<LoadedPdfWorker> => {
   jest.resetModules();
 
   const workerInstances: WorkerInstance[] = [];
@@ -71,8 +71,7 @@ const loadPdfWorker = (): LoadedPdfWorker => {
     },
   }));
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { startPdfWorker } = require('@dist/jobs/workers/pdf.worker');
+  const { startPdfWorker } = await import('@dist/jobs/workers/pdf.worker');
 
   return {
     startPdfWorker,
@@ -85,8 +84,8 @@ const loadPdfWorker = (): LoadedPdfWorker => {
 };
 
 describe('pdf.worker', () => {
-  it('creates worker and registers lifecycle handlers', () => {
-    const { startPdfWorker, workerFactory, workerInstances } = loadPdfWorker();
+  it('creates worker and registers lifecycle handlers', async () => {
+    const { startPdfWorker, workerFactory, workerInstances } = await loadPdfWorker();
 
     const worker = startPdfWorker();
 
@@ -106,7 +105,7 @@ describe('pdf.worker', () => {
   });
 
   it('processes job and logs processing and success actions', async () => {
-    const { startPdfWorker, workerInstances, execute, systemLog } = loadPdfWorker();
+    const { startPdfWorker, workerInstances, execute, systemLog } = await loadPdfWorker();
     execute.mockResolvedValue(successResult(undefined));
 
     startPdfWorker();
@@ -131,7 +130,8 @@ describe('pdf.worker', () => {
   });
 
   it('throws and logs failed action when use-case fails', async () => {
-    const { startPdfWorker, workerInstances, execute, systemLog, loggerError } = loadPdfWorker();
+    const { startPdfWorker, workerInstances, execute, systemLog, loggerError } =
+      await loadPdfWorker();
     execute.mockResolvedValue(failureResult(new Error('pdf generation failed')));
 
     startPdfWorker();
@@ -156,7 +156,8 @@ describe('pdf.worker', () => {
   });
 
   it('logs worker lifecycle events and handles system log write failures', async () => {
-    const { startPdfWorker, workerInstances, execute, systemLog, loggerError } = loadPdfWorker();
+    const { startPdfWorker, workerInstances, execute, systemLog, loggerError } =
+      await loadPdfWorker();
     const logWriteError = new Error('system log unavailable');
     systemLog.mockRejectedValueOnce(logWriteError);
     execute.mockResolvedValue(successResult(undefined));
@@ -184,7 +185,7 @@ describe('pdf.worker', () => {
   });
 
   it('uses default pdf failure message when result has no error and handles missing failed job metadata', async () => {
-    const { startPdfWorker, workerInstances, execute, systemLog } = loadPdfWorker();
+    const { startPdfWorker, workerInstances, execute, systemLog } = await loadPdfWorker();
     execute.mockResolvedValue(failureResult(null));
 
     startPdfWorker();
@@ -204,6 +205,26 @@ describe('pdf.worker', () => {
         metadata: expect.objectContaining({ jobId: undefined }),
         message: 'worker failure without job',
       })
+    );
+  });
+
+  it('rejects invalid queue payload before executing use case', async () => {
+    const { startPdfWorker, workerInstances, execute, systemLog } = await loadPdfWorker();
+    execute.mockResolvedValue(successResult(undefined));
+
+    startPdfWorker();
+    const worker = workerInstances[0];
+
+    await expect(
+      worker.processor({
+        id: 'job-1',
+        data: { exportId: 'export-1', userId: 'user-1' },
+      })
+    ).rejects.toThrow();
+
+    expect(execute).not.toHaveBeenCalled();
+    expect(systemLog).not.toHaveBeenCalledWith(
+      expect.objectContaining({ action: SystemActions.EXPORT_PDF_PROCESSING })
     );
   });
 });

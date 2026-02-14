@@ -1,5 +1,7 @@
 # Feature Implementation Plan (Resume + Export Core)
 
+Status as of **February 14, 2026**.
+
 ## Execution Order
 
 1. Resume guardrails (`MAX_RESUME_SECTIONS`, deep validation)
@@ -8,119 +10,92 @@
 4. Export operations (`cleanup`, `retry`, monitoring)
 5. Plan-limit model refinement and docs
 
-## Phase 1: Resume Guardrails
+## Delivery Status
 
-1. Enforce `MAX_RESUME_SECTIONS` in create/update
-- Add a policy/rule in resume application/domain for section count.
-- Apply in:
-  - `backend/src/modules/resume/application/use-cases/create-resume/create-resume.use-case.ts`
-  - `backend/src/modules/resume/application/use-cases/update-resume/update-resume.use-case.ts`
-- Return `400` with clear error message.
-- Add unit + integration tests for valid/invalid cases.
+### Phase 1: Resume Guardrails
 
-2. Deep resume validation (structure + required sections by template)
-- Add validator contract in `resume/application/services`.
-- Implement validator in `resume/infrastructure/services`.
-- Validate by template id (using `@hirely/resume-templates` rules).
-- Execute validation before persistence in create/update use-cases.
-- Add tests per template rule matrix.
+- Status: **Completed**
+- Delivered:
+  - Section-count enforcement in create/update flow.
+  - Template required-section validation.
+  - Unit and integration coverage for validation paths.
 
-## Phase 2: Default Resume
+### Phase 2: Default Resume
 
-1. Data model
-- Prisma migration: add `isDefault Boolean @default(false)` to `Resume`.
-- Add partial unique index: one default resume per user.
-- Backfill existing data (set one default when missing).
+- Status: **Completed**
+- Delivered:
+  - `isDefault` model support and behavior.
+  - Auto-default on first resume.
+  - Default promotion flow on delete.
+  - `PATCH /resumes/:id/default` API.
 
-2. Application behavior
-- First resume for a user becomes default automatically.
-- Deleting default resume auto-promotes another resume (if available).
-- Add `SetDefaultResumeUseCase`.
-- Include `isDefault` in query DTOs.
+### Phase 3: Export Reliability Core
 
-3. API + docs
-- Add endpoint: `PATCH /resumes/:id/default`.
-- Update `backend/docs/swagger.yaml`.
+- Status: **Completed**
+- Delivered:
+  - `sizeBytes` tracked on exports.
+  - Daily upload byte-limit enforcement.
+  - Production SMTP validation/fail-fast behavior.
+  - Local/S3 storage driver configuration and wiring.
 
-4. Tests
-- Migration/backfill correctness tests.
-- API and use-case tests for default behavior.
+### Phase 4: Export Operations
 
-## Phase 3: Export Reliability Core
+- Status: **Completed**
+- Delivered:
+  - Expired export cleanup use case + scheduled worker.
+  - Queue retry/backoff/retention via config.
+  - Failed export and failed export-email visibility endpoints.
+  - Export operations metrics endpoint.
+  - Structured worker failure metadata logs.
 
-1. Billing enforcement
-- Replace placeholder in `backend/src/modules/billing/infrastructure/services/billing.service.ts`.
-- Add `sizeBytes` to `ResumeExport` (migration).
-- Enforce daily upload bytes per plan.
-- Integrate check in export completion flow.
+### Phase 5: Plan-Limit Refinement
 
-2. SMTP production transport
-- Require SMTP config in production (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`).
-- Fail fast for invalid production SMTP config.
-- Keep safe non-production fallback.
+- Status: **Completed**
+- Delivered:
+  - Canonical `PlanLimitDto` + derived usage limits.
+  - Shared plan-limit policy functions.
+  - Centralized limit checks in resume/export/billing flows.
+  - Finalized `PLAN_CHANGES.md` with concrete examples.
 
-3. S3 export storage
-- Add/confirm S3 storage implementation in resume infrastructure.
-- Add config switch `EXPORT_STORAGE_DRIVER=local|s3`.
-- Wire in `backend/src/apps/container.shared.ts`.
-- Keep local as default for dev/test.
+## Quality Gates
 
-4. Tests
-- Billing path tests.
-- Storage contract tests (local + s3 mock).
-- SMTP service tests with mocked transport.
+Current baseline:
 
-## Phase 4: Export Operations
+- `npm run arch:check` ✅
+- `npm run lint` ✅
+- `npm run typecheck` ✅
+- `npm test -- --runInBand --silent` ✅
+- `npm run openapi:lint` ✅
 
-1. Expired export cleanup
-- Add cleanup use-case/worker to remove expired records + files.
-- Schedule via worker loop with configurable interval.
-- Ensure idempotency.
+## Next Iteration Candidates
 
-2. Retry and dead-letter visibility
-- Configure queue retry/backoff options.
-- Retain failure metadata for troubleshooting.
-- Add status endpoints/use-cases for failed export/email jobs.
-- Add structured failure logs (jobId, exportId, userId, reason).
+1. Add queue metrics split by reason (`free-tier-export` vs `bulk-apply`) for email success/failure.
 
-3. Monitoring
-- Add counters for export/email success/failure and cleanup results.
-- Add logs with stable action names and correlation IDs.
-- Optional: expose basic metrics endpoint.
+## Post-Plan Additions
 
-## Phase 5: Plan-Limit Refinement
-
-1. Clarify limit model
-- Define one canonical `PlanLimit` structure per plan.
-- Remove ambiguous/duplicated limit logic.
-
-2. Centralize limit reads
-- Ensure all resume/export limits go through one application policy/repository path.
-
-3. Docs
-- Update `backend/docs/PLAN_CHANGES.md` with final limit model and examples.
-
-## Cross-Cutting Requirements
-
-1. DDD boundaries
-- Keep domain logic in domain/application policies.
-- Keep infra-specific integration in infrastructure.
-- Keep controllers thin.
-
-2. Quality gates
-- Must pass:
-  - `npm run arch:check`
-  - `npm run lint`
-  - `npm run typecheck`
-  - `npm test` (targeted or full)
-
-## Recommended PR Breakdown
-
-1. PR-1: `MAX_RESUME_SECTIONS` + deep validation
-2. PR-2: default resume migration + endpoint
-3. PR-3: billing enforcement + export `sizeBytes`
-4. PR-4: SMTP production setup
-5. PR-5: S3 storage driver wiring
-6. PR-6: expired export cleanup worker
-7. PR-7: retry/dead-letter/monitoring endpoints
-8. PR-8: plan-limit refinement + docs
+- Added user-facing plan usage endpoint:
+  - `GET /api/users/me/plan-usage`
+  - Includes plan limits, current usage, and remaining values.
+- Added DB-level plan-limit integrity migration:
+  - Backfill missing `PlanLimit` rows
+  - Deferred constraint trigger to ensure each new `Plan` has a limit row
+  - Deferred constraint trigger preventing orphaned plans after `PlanLimit` delete
+- Added export cleanup dry-run mode:
+  - `EXPORT_CLEANUP_DRY_RUN=true` computes cleanup impact without deleting files/rows
+- Added export failure threshold alerts:
+  - configurable window, minimum event count, failure ratio, and cooldown
+  - alert actions are written to `SystemLog`
+- Added queue payload contract hardening:
+  - shared Zod payload schemas for PDF and email queues
+  - producer-side validation in BullMQ queue services
+  - worker-side validation before invoking use cases
+  - unit tests covering schema parsing and enqueue/worker behavior
+- Added export enqueue idempotency keys:
+  - optional `idempotencyKey` in enqueue export request body
+  - DB uniqueness constraint on (`userId`, `idempotencyKey`)
+  - same-key retries return existing export for the same resume
+  - same-key cross-resume reuse returns conflict
+- Added dead-letter requeue endpoints with guardrails:
+  - `POST /api/resumes/exports/:exportId/retry`
+  - `POST /api/resumes/exports/failed-emails/:jobId/retry`
+  - ownership and status checks + retry rate limiting

@@ -1,5 +1,4 @@
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { ValueObject } = require('@dist/modules/shared/domain/base/value-object.base');
+import { ValueObject } from '@dist/modules/shared/domain/base/value-object.base';
 
 class SampleValueObject extends ValueObject {
   constructor(value: string) {

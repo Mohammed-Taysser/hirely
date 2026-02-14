@@ -10,7 +10,7 @@ type WorkerInstance = {
 };
 
 type LoadedPlanWorker = {
-  startPlanWorker: () => WorkerInstance;
+  startPlanWorker: () => unknown;
   workerInstances: WorkerInstance[];
   workerFactory: jest.Mock;
   queueAdd: jest.Mock;
@@ -25,7 +25,7 @@ const flushPromises = async () => {
   await Promise.resolve();
 };
 
-const loadPlanWorker = (): LoadedPlanWorker => {
+const loadPlanWorker = async (): Promise<LoadedPlanWorker> => {
   jest.resetModules();
 
   const workerInstances: WorkerInstance[] = [];
@@ -92,8 +92,7 @@ const loadPlanWorker = (): LoadedPlanWorker => {
     },
   }));
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { startPlanWorker } = require('@dist/jobs/workers/plan.worker');
+  const { startPlanWorker } = await import('@dist/jobs/workers/plan.worker');
 
   return {
     startPlanWorker,
@@ -109,7 +108,7 @@ const loadPlanWorker = (): LoadedPlanWorker => {
 
 describe('plan.worker', () => {
   it('schedules repeatable job on startup and logs success', async () => {
-    const { startPlanWorker, queueAdd, systemLog, workerFactory } = loadPlanWorker();
+    const { startPlanWorker, queueAdd, systemLog, workerFactory } = await loadPlanWorker();
 
     startPlanWorker();
     await flushPromises();
@@ -137,7 +136,8 @@ describe('plan.worker', () => {
   });
 
   it('applies scheduled changes and writes system + audit logs', async () => {
-    const { startPlanWorker, workerInstances, applyExecute, systemLog, auditLog } = loadPlanWorker();
+    const { startPlanWorker, workerInstances, applyExecute, systemLog, auditLog } =
+      await loadPlanWorker();
     applyExecute.mockResolvedValue(
       successResult([
         { userId: 'user-1', planId: 'plan-pro' },
@@ -172,7 +172,8 @@ describe('plan.worker', () => {
   });
 
   it('logs schedule failure and propagates processing failures', async () => {
-    const { startPlanWorker, workerInstances, queueAdd, applyExecute, systemLog } = loadPlanWorker();
+    const { startPlanWorker, workerInstances, queueAdd, applyExecute, systemLog } =
+      await loadPlanWorker();
     queueAdd.mockRejectedValue(new Error('schedule failed'));
     applyExecute.mockResolvedValue(failureResult(new Error('apply failed')));
 
@@ -198,7 +199,8 @@ describe('plan.worker', () => {
   });
 
   it('handles lifecycle + audit/system log write failures without crashing', async () => {
-    const { startPlanWorker, workerInstances, applyExecute, systemLog, auditLog, loggerError } = loadPlanWorker();
+    const { startPlanWorker, workerInstances, applyExecute, systemLog, auditLog, loggerError } =
+      await loadPlanWorker();
     const systemLogWriteError = new Error('system log unavailable');
     const auditLogWriteError = new Error('audit log unavailable');
     systemLog.mockRejectedValueOnce(systemLogWriteError);
@@ -222,7 +224,7 @@ describe('plan.worker', () => {
   });
 
   it('logs unknown schedule errors and handles worker failed event without job id', async () => {
-    const { startPlanWorker, queueAdd, workerInstances, systemLog } = loadPlanWorker();
+    const { startPlanWorker, queueAdd, workerInstances, systemLog } = await loadPlanWorker();
     queueAdd.mockRejectedValue('non-error');
 
     startPlanWorker();
@@ -246,7 +248,8 @@ describe('plan.worker', () => {
   });
 
   it('completes run with zero updates when no scheduled plan changes are pending', async () => {
-    const { startPlanWorker, workerInstances, applyExecute, systemLog, auditLog } = loadPlanWorker();
+    const { startPlanWorker, workerInstances, applyExecute, systemLog, auditLog } =
+      await loadPlanWorker();
     applyExecute.mockResolvedValue(successResult([]));
 
     startPlanWorker();

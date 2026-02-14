@@ -1,7 +1,5 @@
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { AggregateRoot } = require('@dist/modules/shared/domain/base/aggregate-root.base');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { DomainEvents } = require('@dist/modules/shared/domain/events/domain-events');
+import { AggregateRoot } from '@dist/modules/shared/domain/base/aggregate-root.base';
+import { DomainEvents } from '@dist/modules/shared/domain/events/domain-events';
 
 class DummyAggregate extends AggregateRoot {
   constructor(label: string, id?: string) {

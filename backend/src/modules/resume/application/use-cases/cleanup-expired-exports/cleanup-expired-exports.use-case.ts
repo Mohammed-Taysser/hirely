@@ -25,7 +25,23 @@ export class CleanupExpiredExportsUseCase implements UseCase<
   async execute(request: CleanupExpiredExportsRequestDto): Promise<CleanupExpiredExportsResponse> {
     try {
       const now = request.now ?? new Date();
+      const dryRun = request.dryRun ?? false;
       const expiredExports = await this.resumeExportRepository.findExpired(now, request.batchSize);
+      const wouldDeleteRecords = expiredExports.length;
+      const wouldDeleteFiles = expiredExports.filter((record) => Boolean(record.url)).length;
+
+      if (dryRun) {
+        return Result.ok({
+          scanned: expiredExports.length,
+          deletedRecords: 0,
+          deletedFiles: 0,
+          wouldDeleteRecords,
+          wouldDeleteFiles,
+          dryRun: true,
+          failed: 0,
+          failures: [],
+        });
+      }
 
       const deletableIds: string[] = [];
       const failures: CleanupExpiredExportsResponseDto['failures'] = [];
@@ -54,6 +70,9 @@ export class CleanupExpiredExportsUseCase implements UseCase<
         scanned: expiredExports.length,
         deletedRecords,
         deletedFiles,
+        wouldDeleteRecords,
+        wouldDeleteFiles,
+        dryRun: false,
         failed: failures.length,
         failures: failures.slice(0, MAX_FAILURES_IN_RESPONSE),
       });

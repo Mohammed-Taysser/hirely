@@ -7,6 +7,10 @@ import { ResumeName } from '../../../domain/value-objects/resume-name.vo';
 import { AuditActions } from '@/modules/audit/application/audit.actions';
 import { buildAuditEntity } from '@/modules/audit/application/audit.entity';
 import { IAuditLogService } from '@/modules/audit/application/services/audit-log.service.interface';
+import {
+  hasReachedResumeLimit,
+  requirePlanUsageLimits,
+} from '@/modules/plan/application/policies/plan-limit.policy';
 import { IPlanLimitQueryRepository } from '@/modules/plan/application/repositories/plan-limit.query.repository.interface';
 import {
   buildResumeSectionsLimitErrorMessage,
@@ -81,14 +85,11 @@ export class CreateResumeUseCase implements UseCase<CreateResumeRequestDto, Crea
       }
 
       const planLimit = await this.planLimitQueryRepository.findByPlanId(request.planId);
-
-      if (!planLimit) {
-        return Result.fail(new UnexpectedError(new Error('Plan limits are not configured')));
-      }
+      const planUsageLimits = requirePlanUsageLimits(planLimit);
 
       const currentCount = await this.resumeRepository.countByUserId(request.userId);
 
-      if (currentCount >= planLimit.maxResumes) {
+      if (hasReachedResumeLimit(currentCount, planUsageLimits.maxResumes)) {
         return Result.fail(new ForbiddenError('Resume limit reached for your plan'));
       }
 
@@ -142,6 +143,10 @@ export class CreateResumeUseCase implements UseCase<CreateResumeRequestDto, Crea
 
       return Result.ok(created);
     } catch (err) {
+      if (err instanceof ForbiddenError) {
+        return Result.fail(err);
+      }
+
       await this.systemLogService.log({
         level: 'error',
         action: SystemActions.RESUME_CREATE_FAILED,

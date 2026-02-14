@@ -89,6 +89,7 @@ model ResumeExport {
   id         String @id @default(uuid())
   snapshotId String
   userId     String
+  idempotencyKey String?
 
   url       String?
   sizeBytes Int?
@@ -107,6 +108,8 @@ model ResumeExport {
   @@index([status])
   @@index([expiresAt])
   @@index([createdAt])
+  @@index([idempotencyKey])
+  @@unique([userId, idempotencyKey])
 }
 
 model ActivityLog {
