@@ -4,6 +4,7 @@ class ResumeSelect {
   public basic = {
     id: true,
     name: true,
+    isDefault: true,
   } satisfies Prisma.ResumeSelect;
 
   public full = {

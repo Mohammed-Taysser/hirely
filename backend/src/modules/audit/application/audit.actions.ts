@@ -13,6 +13,8 @@ export const AuditActions = {
   RESUME_CREATED: 'resume.created',
   RESUME_UPDATED: 'resume.updated',
   RESUME_DELETED: 'resume.deleted',
+  RESUME_DEFAULT_SET: 'resume.default.set',
+  RESUME_DEFAULT_PROMOTED: 'resume.default.promoted',
   RESUME_EXPORT_DOWNLOADED: 'resume.export.downloaded',
 
   EXPORT_ENQUEUED: 'export.enqueued',

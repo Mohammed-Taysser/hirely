@@ -4,6 +4,7 @@ export interface ResumeDto {
   id: string;
   name: string;
   data: ResumeData;
+  isDefault: boolean;
   templateId: string;
   templateVersion?: string | null;
   themeConfig?: unknown;

@@ -136,6 +136,10 @@ const updateResumeSchema = {
     }),
 };
 
+const setDefaultResumeSchema = {
+  params: getResumeByIdSchema.params,
+};
+
 const resumeDTO = {
   createResume: createResumeSchema,
   getResumesList: getResumesListSchema,
@@ -147,6 +151,7 @@ const resumeDTO = {
   enqueueExport: enqueueExportSchema,
   getResumeExportStatus: getResumeExportStatusSchema,
   updateResume: updateResumeSchema,
+  setDefaultResume: setDefaultResumeSchema,
 };
 
 export type ResumeDTO = {
@@ -160,6 +165,7 @@ export type ResumeDTO = {
   enqueueExport: typeof enqueueExportSchema;
   getResumeExportStatus: typeof getResumeExportStatusSchema;
   updateResume: typeof updateResumeSchema;
+  setDefaultResume: typeof setDefaultResumeSchema;
 };
 
 export default resumeDTO;

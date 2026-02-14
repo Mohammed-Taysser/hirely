@@ -16,6 +16,7 @@ const setup = () => {
     createResume: jest.fn(),
     updateResume: jest.fn(),
     deleteResume: jest.fn(),
+    setDefaultResume: jest.fn(),
   };
 
   const dto = {
@@ -29,6 +30,7 @@ const setup = () => {
     getResumeExportStatus: { name: 'getResumeExportStatus' },
     createResume: { name: 'createResume' },
     updateResume: { name: 'updateResume' },
+    setDefaultResume: { name: 'setDefaultResume' },
   };
 
   const authenticateMiddleware = jest.fn();
@@ -127,6 +129,12 @@ describe('resume route integration', () => {
         path: '/:resumeId',
         schema: dto.getResumeById,
         handler: controller.deleteResume,
+      },
+      {
+        method: 'patch',
+        path: '/:resumeId/default',
+        schema: dto.setDefaultResume,
+        handler: controller.setDefaultResume,
       },
     ];
 

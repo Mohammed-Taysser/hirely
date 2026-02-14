@@ -85,6 +85,13 @@ resumeRoutes.patch(
   controller.updateResume
 );
 
+resumeRoutes.patch(
+  '/:resumeId/default',
+  authenticateMiddleware,
+  validateRequest(resumeDTO.setDefaultResume),
+  controller.setDefaultResume
+);
+
 resumeRoutes.delete(
   '/:resumeId',
   authenticateMiddleware,

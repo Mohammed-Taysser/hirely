@@ -5,6 +5,7 @@ import { DateRangeInput } from '@/modules/shared/application/filters';
 export interface ResumeBasicDto {
   id: string;
   name: string;
+  isDefault: boolean;
 }
 
 export interface ResumeFullDto extends ResumeBasicDto {

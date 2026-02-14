@@ -12,6 +12,7 @@ export class ResumeMapper {
       {
         name: resumeNameOrError.getValue(),
         data: raw.data as ResumeData,
+        isDefault: raw.isDefault,
         templateId: raw.templateId,
         templateVersion: raw.templateVersion,
         themeConfig: raw.themeConfig,
@@ -30,6 +31,7 @@ export class ResumeMapper {
       id: resume.id,
       name: resume.name.value,
       data: resume.data as Prisma.InputJsonValue,
+      isDefault: resume.isDefault,
       templateId: resume.templateId,
       templateVersion: resume.templateVersion || null,
       themeConfig: resume.themeConfig as Prisma.InputJsonValue,

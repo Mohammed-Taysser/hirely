@@ -87,6 +87,7 @@ const buildDependencies = () => {
     id: 'resume-1',
     name: 'My Resume',
     userId: 'user-1',
+    isDefault: true,
     templateId: 'classic',
     templateVersion: null,
     themeConfig: null,
@@ -217,6 +218,46 @@ describe('CreateResumeUseCase', () => {
     expect(result.isFailure).toBe(true);
     expect(result.error).toBeInstanceOf(ForbiddenError);
     expect(deps.resumeRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('marks first user resume as default', async () => {
+    const deps = buildDependencies();
+    deps.resumeRepository.countByUserId.mockResolvedValue(0);
+
+    const result = await deps.useCase.execute({
+      userId: 'user-1',
+      planId: 'plan-1',
+      name: 'My Resume',
+      templateId: 'classic',
+      data: buildResumeData(2),
+    });
+
+    expect(result.isSuccess).toBe(true);
+    expect(deps.resumeRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        isDefault: true,
+      })
+    );
+  });
+
+  it('does not mark non-first resume as default', async () => {
+    const deps = buildDependencies();
+    deps.resumeRepository.countByUserId.mockResolvedValue(2);
+
+    const result = await deps.useCase.execute({
+      userId: 'user-1',
+      planId: 'plan-1',
+      name: 'My Resume',
+      templateId: 'classic',
+      data: buildResumeData(2),
+    });
+
+    expect(result.isSuccess).toBe(true);
+    expect(deps.resumeRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        isDefault: false,
+      })
+    );
   });
 
   it('fails when read model does not return created resume', async () => {

@@ -12,6 +12,7 @@ const mockEnqueueResumeExportExecute = jest.fn();
 const mockCreateResumeExecute = jest.fn();
 const mockUpdateResumeExecute = jest.fn();
 const mockDeleteResumeExecute = jest.fn();
+const mockSetDefaultResumeExecute = jest.fn();
 
 jest.mock('@dist/apps/container', () => ({
   resumeContainer: {
@@ -31,6 +32,7 @@ jest.mock('@dist/apps/container', () => ({
     createResumeUseCase: { execute: (...args: unknown[]) => mockCreateResumeExecute(...args) },
     updateResumeUseCase: { execute: (...args: unknown[]) => mockUpdateResumeExecute(...args) },
     deleteResumeUseCase: { execute: (...args: unknown[]) => mockDeleteResumeExecute(...args) },
+    setDefaultResumeUseCase: { execute: (...args: unknown[]) => mockSetDefaultResumeExecute(...args) },
   },
 }));
 
@@ -679,6 +681,54 @@ describe('resume controller integration', () => {
     let thrown: unknown;
     try {
       await resumeController.deleteResume(req, res);
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect((thrown as { statusCode?: number }).statusCode).toBe(404);
+  });
+
+  it('setDefaultResume maps request and returns updated resume', async () => {
+    mockSetDefaultResumeExecute.mockResolvedValue(
+      successResult({
+        id: 'resume-1',
+        isDefault: true,
+      })
+    );
+
+    const req = {
+      user: { id: 'user-1', planId: 'plan-1' },
+      parsedParams: { resumeId: 'resume-1' },
+    };
+    const res = buildResponse();
+
+    await resumeController.setDefaultResume(req, res);
+
+    expect(mockSetDefaultResumeExecute).toHaveBeenCalledWith({
+      resumeId: 'resume-1',
+      userId: 'user-1',
+    });
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        message: 'Default resume updated successfully',
+      })
+    );
+  });
+
+  it('setDefaultResume throws mapped error when use case fails', async () => {
+    mockSetDefaultResumeExecute.mockResolvedValue(failureResult(new NotFoundError('Resume not found')));
+
+    const req = {
+      user: { id: 'user-1', planId: 'plan-1' },
+      parsedParams: { resumeId: 'missing-resume' },
+    };
+    const res = buildResponse();
+
+    let thrown: unknown;
+    try {
+      await resumeController.setDefaultResume(req, res);
     } catch (error) {
       thrown = error;
     }

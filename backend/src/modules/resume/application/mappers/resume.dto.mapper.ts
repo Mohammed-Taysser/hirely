@@ -7,6 +7,7 @@ export class ResumeDtoMapper {
       id: resume.id,
       name: resume.name.value,
       data: resume.data,
+      isDefault: resume.isDefault,
       templateId: resume.templateId,
       templateVersion: resume.templateVersion,
       themeConfig: resume.themeConfig,

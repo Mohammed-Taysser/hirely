@@ -3,6 +3,7 @@ import { DeleteResumeRequestDto, DeleteResumeResponseDto } from './delete-resume
 import { AuditActions } from '@/modules/audit/application/audit.actions';
 import { buildAuditEntity } from '@/modules/audit/application/audit.entity';
 import { IAuditLogService } from '@/modules/audit/application/services/audit-log.service.interface';
+import { IResumeDefaultRepository } from '@/modules/resume/application/repositories/resume-default.repository.interface';
 import { IResumeQueryRepository } from '@/modules/resume/application/repositories/resume.query.repository.interface';
 import { IResumeRepository } from '@/modules/resume/domain/repositories/resume.repository.interface';
 import { NotFoundError, UnexpectedError } from '@/modules/shared/application/app-error';
@@ -16,6 +17,7 @@ type DeleteResumeResponse = Result<DeleteResumeResponseDto, UnexpectedError | No
 export class DeleteResumeUseCase implements UseCase<DeleteResumeRequestDto, DeleteResumeResponse> {
   constructor(
     private readonly resumeRepository: IResumeRepository,
+    private readonly resumeDefaultRepository: IResumeDefaultRepository,
     private readonly resumeQueryRepository: IResumeQueryRepository,
     private readonly systemLogService: ISystemLogService,
     private readonly auditLogService: IAuditLogService
@@ -29,11 +31,48 @@ export class DeleteResumeUseCase implements UseCase<DeleteResumeRequestDto, Dele
         return Result.fail(new NotFoundError('Resume not found'));
       }
 
+      let promotedResumeId: string | null = null;
+      if (resume.isDefault) {
+        promotedResumeId = await this.resumeDefaultRepository.findOldestResumeIdByUserId(
+          request.userId,
+          request.resumeId
+        );
+      }
+
+      await this.resumeRepository.delete(request.resumeId, request.userId);
+
+      if (promotedResumeId) {
+        await this.resumeDefaultRepository.setDefaultResume(request.userId, promotedResumeId);
+
+        await this.systemLogService.log({
+          level: 'info',
+          action: SystemActions.RESUME_DEFAULT_PROMOTED,
+          userId: request.userId,
+          metadata: {
+            deletedResumeId: request.resumeId,
+            promotedResumeId,
+          },
+        });
+
+        await this.auditLogService.log({
+          action: AuditActions.RESUME_DEFAULT_PROMOTED,
+          actorUserId: request.userId,
+          ...buildAuditEntity('resume', promotedResumeId),
+          metadata: {
+            deletedResumeId: request.resumeId,
+          },
+        });
+      }
+
       await this.systemLogService.log({
         level: 'info',
         action: SystemActions.RESUME_DELETED,
         userId: request.userId,
-        metadata: { resumeId: request.resumeId },
+        metadata: {
+          resumeId: request.resumeId,
+          wasDefault: resume.isDefault,
+          promotedResumeId,
+        },
       });
 
       await this.auditLogService.log({
@@ -41,8 +80,6 @@ export class DeleteResumeUseCase implements UseCase<DeleteResumeRequestDto, Dele
         actorUserId: request.userId,
         ...buildAuditEntity('resume', request.resumeId),
       });
-
-      await this.resumeRepository.delete(request.resumeId, request.userId);
 
       return Result.ok(resume);
     } catch (err) {

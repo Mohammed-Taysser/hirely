@@ -23,6 +23,9 @@ export const SystemActions = {
   RESUME_UPDATE_FAILED: 'resume.update.failed',
   RESUME_DELETED: 'resume.deleted',
   RESUME_DELETE_FAILED: 'resume.delete.failed',
+  RESUME_DEFAULT_SET: 'resume.default.set',
+  RESUME_DEFAULT_SET_FAILED: 'resume.default.set.failed',
+  RESUME_DEFAULT_PROMOTED: 'resume.default.promoted',
   RESUME_EXPORT_ENQUEUED: 'resume.export.enqueued',
   RESUME_EXPORT_ENQUEUE_FAILED: 'resume.export.enqueue.failed',
 

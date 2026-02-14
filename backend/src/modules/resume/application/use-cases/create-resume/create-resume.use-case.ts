@@ -92,9 +92,12 @@ export class CreateResumeUseCase implements UseCase<CreateResumeRequestDto, Crea
         return Result.fail(new ForbiddenError('Resume limit reached for your plan'));
       }
 
+      const isDefault = currentCount === 0;
+
       const resumeResult = Resume.create({
         name,
         data: request.data,
+        isDefault,
         templateId: request.templateId,
         templateVersion: request.templateVersion,
         themeConfig: request.themeConfig,
@@ -120,6 +123,7 @@ export class CreateResumeUseCase implements UseCase<CreateResumeRequestDto, Crea
         userId: request.userId,
         metadata: {
           resumeId: resume.id,
+          isDefault,
           templateId: request.templateId,
           templateVersion: request.templateVersion ?? null,
         },
@@ -130,6 +134,7 @@ export class CreateResumeUseCase implements UseCase<CreateResumeRequestDto, Crea
         actorUserId: request.userId,
         ...buildAuditEntity('resume', resume.id),
         metadata: {
+          isDefault,
           templateId: request.templateId,
           templateVersion: request.templateVersion ?? null,
         },

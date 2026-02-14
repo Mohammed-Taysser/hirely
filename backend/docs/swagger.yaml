@@ -740,6 +740,25 @@ paths:
                       data:
                         $ref: '#/components/schemas/Resume'
 
+  /resumes/{resumeId}/default:
+    patch:
+      tags: [Resumes]
+      summary: Set default resume
+      parameters:
+        - $ref: '#/components/parameters/ResumeIdParam'
+      responses:
+        '200':
+          description: Default resume updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Resume'
+
   /resume-templates:
     get:
       tags: [ResumeTemplates]
@@ -1336,6 +1355,8 @@ components:
           format: uuid
         name:
           type: string
+        isDefault:
+          type: boolean
         data:
           type: object
         templateId:

@@ -108,4 +108,20 @@ describe('resume validation integration', () => {
     expect(response.status).toHaveBeenCalledWith(400);
     expect(JSON.stringify(response.json.mock.calls[0][0].error)).toContain('Invalid templateId');
   });
+
+  it('returns HTTP 400 for invalid set-default params', async () => {
+    const request = {
+      body: {},
+      query: {},
+      params: { resumeId: 'invalid-uuid' },
+      originalUrl: '/api/resumes/invalid-uuid/default',
+      method: 'PATCH',
+    };
+
+    const err = await runMiddleware(validateRequest(resumeDTO.setDefaultResume), request);
+    expect(err).toBeDefined();
+
+    const response = runErrorHandler(err, request);
+    expect(response.status).toHaveBeenCalledWith(400);
+  });
 });

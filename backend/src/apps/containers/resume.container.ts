@@ -26,6 +26,7 @@ import { GetResumeExportsUseCase } from '@/modules/resume/application/use-cases/
 import { GetResumeSnapshotsUseCase } from '@/modules/resume/application/use-cases/get-resume-snapshots/get-resume-snapshots.use-case';
 import { GetResumesUseCase } from '@/modules/resume/application/use-cases/get-resumes/get-resumes.use-case';
 import { GetResumesListUseCase } from '@/modules/resume/application/use-cases/get-resumes-list/get-resumes-list.use-case';
+import { SetDefaultResumeUseCase } from '@/modules/resume/application/use-cases/set-default-resume/set-default-resume.use-case';
 import { UpdateResumeUseCase } from '@/modules/resume/application/use-cases/update-resume/update-resume.use-case';
 
 const createResumeUseCase = new CreateResumeUseCase(
@@ -45,6 +46,13 @@ const updateResumeUseCase = new UpdateResumeUseCase(
   auditLogService
 );
 const deleteResumeUseCase = new DeleteResumeUseCase(
+  resumeRepository,
+  resumeRepository,
+  resumeQueryRepository,
+  systemLogService,
+  auditLogService
+);
+const setDefaultResumeUseCase = new SetDefaultResumeUseCase(
   resumeRepository,
   resumeQueryRepository,
   systemLogService,
@@ -93,6 +101,7 @@ const resumeContainer = {
   createResumeUseCase,
   updateResumeUseCase,
   deleteResumeUseCase,
+  setDefaultResumeUseCase,
 };
 
 export { resumeContainer };

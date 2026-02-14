@@ -7,6 +7,7 @@ import { AggregateRoot, Result } from '@/modules/shared/domain';
 interface ResumeProps {
   name: ResumeName;
   data: ResumeData;
+  isDefault?: boolean;
   templateId: string;
   templateVersion?: string | null;
   themeConfig?: unknown;
@@ -21,6 +22,9 @@ export class Resume extends AggregateRoot<ResumeProps> {
   }
   get data(): ResumeData {
     return this.props.data;
+  }
+  get isDefault(): boolean {
+    return this.props.isDefault ?? false;
   }
   get templateId(): string {
     return this.props.templateId;
@@ -49,6 +53,7 @@ export class Resume extends AggregateRoot<ResumeProps> {
     const resume = new Resume(
       {
         ...props,
+        isDefault: props.isDefault ?? false,
         createdAt: props.createdAt ?? new Date(),
         updatedAt: props.updatedAt ?? new Date(),
       },
@@ -76,6 +81,11 @@ export class Resume extends AggregateRoot<ResumeProps> {
 
   public updateTheme(config: unknown): void {
     this.props.themeConfig = config;
+    this.props.updatedAt = new Date();
+  }
+
+  public setDefault(isDefault: boolean): void {
+    this.props.isDefault = isDefault;
     this.props.updatedAt = new Date();
   }
 }

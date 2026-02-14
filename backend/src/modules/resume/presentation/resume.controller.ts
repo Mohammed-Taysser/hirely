@@ -24,6 +24,7 @@ const {
   createResumeUseCase,
   updateResumeUseCase,
   deleteResumeUseCase,
+  setDefaultResumeUseCase,
 } = resumeContainer;
 
 async function getResumes(req: Request, response: Response) {
@@ -307,6 +308,25 @@ async function deleteResume(req: Request, response: Response) {
   });
 }
 
+async function setDefaultResume(req: Request, response: Response) {
+  const request = req as TypedAuthenticatedRequest<ResumeDTO['setDefaultResume']>;
+  const { resumeId } = request.parsedParams;
+
+  const result = await setDefaultResumeUseCase.execute({
+    resumeId,
+    userId: request.user.id,
+  });
+
+  if (result.isFailure) {
+    throw mapAppErrorToHttp(result.error);
+  }
+
+  responseService.success(response, {
+    message: 'Default resume updated successfully',
+    data: result.getValue(),
+  });
+}
+
 const resumeController = {
   getResumes,
   getResumesList,
@@ -320,6 +340,7 @@ const resumeController = {
   createResume,
   updateResume,
   deleteResume,
+  setDefaultResume,
 };
 
 export default resumeController;
