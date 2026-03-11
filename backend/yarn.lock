@@ -592,7 +592,7 @@
 "@hirely/resume-templates@file:../packages/resume-templates":
   version "0.1.0"
   dependencies:
-    "@hirely/resume-core" "file:../../../../../../home/dev/.cache/yarn/v6/npm-@hirely-resume-templates-0.1.0-19f0b159-be21-4f1e-8922-795fa1671e45-1771023422297/node_modules/@hirely/resume-core"
+    "@hirely/resume-core" "file:../packages/resume-core"
 
 "@hono/node-server@1.19.6":
   version "1.19.6"
@@ -5908,10 +5908,10 @@ pure-rand@^7.0.0:
   resolved "https://registry.npmjs.org/pure-rand/-/pure-rand-7.0.1.tgz"
   integrity sha512-oTUZM/NAZS8p7ANR3SHh30kXB+zK2r2BPcEn/awJIbOvq82WoMN4p62AWWp3Hhw50G0xMsw1mhIBLqHw64EcNQ==
 
-qs@^6.14.0, qs@^6.14.1:
-  version "6.14.1"
-  resolved "https://registry.npmjs.org/qs/-/qs-6.14.1.tgz"
-  integrity sha512-4EK3+xJl8Ts67nLYNwqw/dsFVnCf+qR7RgXSK9jEEm9unao3njwMDdmsdvoKBKHzxd7tCYz5e5M+SnMjdtXGQQ==
+qs@^6.14.0, qs@^6.14.1, qs@^6.14.2:
+  version "6.14.2"
+  resolved "https://registry.yarnpkg.com/qs/-/qs-6.14.2.tgz#b5634cf9d9ad9898e31fba3504e866e8efb6798c"
+  integrity sha512-V/yCWTTF7VJ9hIh18Ugr2zhJMP01MY7c5kh4J870L7imm6/DIzBsNLTXzMwUA3yZ5b/KBqLx8Kp3uRvd7xSe3Q==
   dependencies:
     side-channel "^1.1.0"
 
